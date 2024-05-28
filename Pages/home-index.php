@@ -52,7 +52,7 @@ $folders_result = $conn->query($folders_sql);
                             <div class="card text-white">
                                 <div class="card-md-body signature-bg-color text-center rounded py-4 position-relative" role="button">
                                     <i class="fa-solid fa-folder fa-6x position-relative" style="z-index: 1;"></i>
-                                    <h5 class="card-title position-absolute top-50 start-50 translate-middle pb-4" style="z-index: 2; color:#043f9d;"><?php echo $initials; ?></h5>
+                                    <h5 class="card-title position-absolute top-50 start-50 translate-middle pb-4 fw-bold" style="z-index: 2; color:#043f9d;"><?php echo $initials; ?></h5>
                                     <p class="card-text fw-bold mt-2"><?php echo $row['folder_name'] ?></p>
                                 </div>
                             </div>

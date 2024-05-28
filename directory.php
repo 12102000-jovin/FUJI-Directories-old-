@@ -5,7 +5,7 @@ use PhpOffice\PhpSpreadsheet\IOFactory;
 function displayExcelFile($filePath)
 {
     if (is_dir($filePath)) {
-        // If the given path is a directory, open the 'susb' subfolder first
+        // If the given path is a directory, open the 'sus`b' subfolder first
         $filePath = rtrim($filePath, '/') . '/susb/';
     }
 
@@ -31,7 +31,6 @@ function displayExcelFile($filePath)
             }
             $html .= '</table></div>';
         }
-
         return $html;
     } else {
         return "File not found.";

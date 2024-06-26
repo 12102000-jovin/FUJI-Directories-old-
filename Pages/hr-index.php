@@ -130,7 +130,7 @@ $dataPoints = array(
     </div>
     <div class="tab-content" id="myTabContent">
         <div class="tab-pane fade show active" id="active" role="tabpanel" aria-labelledby="active-tab">
-            <div class="mt-5 col-md-6" id="chartContainer" style="height: 370px;"></div>
+            <div class="mt-5 col-md-8" id="chartContainer" style="height: 370px;"></div>
         </div>
         <div class="tab-pane fade" id="link1" role="tabpanel" aria-labelledby="link1-tab">
             <?php require_once("./List/EmployeeList.php") ?>

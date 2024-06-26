@@ -70,7 +70,6 @@ $folders_result = $conn->query($folders_sql);
             </div>
         <?php endif; ?>
     </div>
-
 </body>
 
 </html>

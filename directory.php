@@ -191,7 +191,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['coordinate']) && isset
                     <div class="modal-body">
                         <div class="form-group">
                             <label for="cellValue">Cell Value</label>
-                            <input type="text" class="form-control" id="cellValue" name="value" required>
+                            <input type="text" class="form-control" id="cellValue" name="value">
                         </div>
                         <input type="hidden" id="cellCoordinate" name="coordinate">
                         <input type="hidden" id="sheetName" name="sheet">

@@ -6,7 +6,7 @@ error_reporting(E_ALL);
 $employee_id = $_SESSION['employee_id'];
 
 // SQL Query to get the folders
-$folders_sql = "SELECT f.*
+$folders_sql = "SELECT DISTINCT f.*
 FROM folders f
 JOIN groups_folders gf ON f.folder_id = gf.folder_id
 JOIN users_groups ug ON gf.group_id = ug.group_id
@@ -37,9 +37,10 @@ $folders_result = $conn->query($folders_sql);
 
 <body>
     <div class="container-fluid">
-        <?php if ($folders_result->num_rows > 0) : ?>
+        <?php if ($folders_result->num_rows > 0): ?>
             <div class="row row-cols-1 row-cols-sm-2 row-cols-md-3 row-cols-lg-4 g-4">
-                <?php while ($row = $folders_result->fetch_assoc()) : ?>
+                <?php while ($row = $folders_result->fetch_assoc()): ?>
+
                     <?php
                     $initials = '';
                     $words = explode(' ', $row['folder_name']); // Split the folder name into words
@@ -50,9 +51,11 @@ $folders_result = $conn->query($folders_sql);
                     <div class="col">
                         <a href="?menu=<?php echo strtolower($initials); ?>" class="text-decoration-none">
                             <div class="card text-white">
-                                <div class="card-md-body signature-bg-color text-center rounded py-4 position-relative" role="button">
-                                    <i class="fa-solid fa-folder fa-6x position-relative" style="z-index: 1;"></i>
-                                    <h5 class="card-title position-absolute top-50 start-50 translate-middle pb-4 fw-bold" style="z-index: 2; color:#043f9d;"><?php echo $initials; ?></h5>
+                                <div class="card-md-body signature-bg-color text-center rounded py-4 position-relative"
+                                    role="button">                
+                                    <i class="fa-solid fa-folder fa-6x position-relative text-warning" style="z-index: 1;"></i>
+                                    <h5 class="card-title position-absolute top-50 start-50 translate-middle pb-4 fw-bold"
+                                        style="z-index: 2;"><?php echo $initials ?></h5>
                                     <p class="card-text fw-bold mt-2"><?php echo $row['folder_name'] ?></p>
                                 </div>
                             </div>
@@ -60,7 +63,7 @@ $folders_result = $conn->query($folders_sql);
                     </div>
                 <?php endwhile; ?>
             </div>
-        <?php else : ?>
+        <?php else: ?>
             <div class="row">
                 <div class="d-flex justify-content-center">
                     <div class="alert alert-danger col-md-6 text-center" role="alert">

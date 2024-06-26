@@ -41,7 +41,7 @@ if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST['groupIdToEdit'])) {
         echo '<script>window.location.replace("' . $_SERVER['PHP_SELF'] . '?page=manageGroups");</script>';
         exit();
     } else {
-        echo "Error: " .  $edit_group_name_result . "<br>" . $conn->error;
+        echo "Error: " . $edit_group_name_result . "<br>" . $conn->error;
     }
 }
 
@@ -60,7 +60,26 @@ if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST['userGroupIdToRemove']
         echo '<script>window.location.replace("' . $_SERVER['PHP_SELF'] . '?page=manageGroups");</script>';
         exit();
     } else {
-        echo "Error: " .  $delete_user_from_group_result . "<br>" . $conn->error;
+        echo "Error: " . $delete_user_from_group_result . "<br>" . $conn->error;
+    }
+}
+
+if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST['groupFolderIdToRemove'])) {
+    $groupFolderIdToRemove = $_POST['groupFolderIdToRemove'];
+
+    echo $groupFolderIdToRemove;
+
+    // Query to remove group from folder
+    $delete_group_from_folder_sql = "DELETE FROM groups_folders WHERE group_folder_id = ?";
+    $delete_group_from_folder_result = $conn->prepare($delete_group_from_folder_sql);
+    $delete_group_from_folder_result->bind_param("i", $groupFolderIdToRemove);
+
+    // Execute the prepared statement
+    if ($delete_group_from_folder_result->execute()) {
+        echo '<script>window.location.replace("' . $_SERVER['PHP_SELF'] . '?page=manageGroups");</script>';
+        exit();
+    } else {
+        echo "Error: " . $delete_group_from_folder_result . "<br>" . $conn->error;
     }
 }
 
@@ -137,7 +156,7 @@ if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST['newGroupName']) && is
         echo '<script>window.location.replace("' . $_SERVER['PHP_SELF'] . '?page=manageGroups");</script>';
         exit();
     } else {
-        echo "Error: " .  $add_group_result->error;
+        echo "Error: " . $add_group_result->error;
     }
 }
 
@@ -183,36 +202,44 @@ if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST['newGroupName']) && is
                             </tr>
                         </thead>
                         <tbody>
-                            <?php while ($row = $groups_result->fetch_assoc()) : ?>
+                            <?php while ($row = $groups_result->fetch_assoc()): ?>
                                 <tr class="text-center">
                                     <form method="POST">
                                         <td class="py-4 align-middle text-center">
                                             <span class=" view-mode"><?= $row['group_name'] ?></span>
                                             <input type="hidden" name="groupIdToEdit" value="<?= $row['group_id'] ?>" />
-                                            <input type="text" class="form-control edit-mode d-none mx-auto" name="groupNameToEdit" value="<?= $row['group_name'] ?>" style="width:80%">
+                                            <input type="text" class="form-control edit-mode d-none mx-auto"
+                                                name="groupNameToEdit" value="<?= $row['group_name'] ?>" style="width:80%">
                                         </td>
                                         <td class="py-4 align-middle text-center">
-                                            <button class="btn text-warning view-mode">
-                                                <i class="fa-solid fa-folder"></i>
+                                            <button class="btn text-warning view-mode" type="button" data-bs-toggle="modal"
+                                                data-bs-target="#folderModal<?= $row['group_id'] ?>">
+                                                <i class="fa-solid fa-folder tooltips" data-bs-toggle="tooltip" data-bs-placement="top" title="Folder Access"></i>
                                             </button>
-                                            <button class="btn viewMemberBtn text-success view-mode" type="button" data-bs-toggle="modal" data-bs-target="#memberModal<?= $row['group_id'] ?>">
-                                                <i class="fa-solid fa-user-group"></i>
+                                            <button class="btn viewMemberBtn text-success view-mode" type="button"
+                                                data-bs-toggle="modal" data-bs-target="#memberModal<?= $row['group_id'] ?>">
+                                                <i class="fa-solid fa-user-group tooltips" data-bs-toggle="tooltip" data-bs-placement="top" title="Group Member"></i>
                                             </button>
-                                            <button class="btn text-info view-mode" type="button" data-bs-toggle="modal" data-bs-target="#addMemberToGroupModal<?= $row['group_id'] ?>">
-                                                <i class="fa-solid fa-plus"></i>
+                                            <button class="btn text-info view-mode" type="button" data-bs-toggle="modal"
+                                                data-bs-target="#addMemberToGroupModal<?= $row['group_id'] ?>">
+                                                <i class="fa-solid fa-plus tooltips" data-bs-toggle="tooltip" data-bs-placement="top" title="Add Member"></i>
                                             </button>
                                             <button class="btn edit-btn text-primary view-mode" type="button">
-                                                <i class=" fa-regular fa-pen-to-square m-1"></i>
+                                                <i class=" fa-regular fa-pen-to-square m-1 tooltips" data-bs-toggle="tooltip" data-bs-placement="top" title="Edit Group"></i>
                                             </button>
-                                            <button class="btn text-danger view-mode" id="deleteGroupBtn" type="button" data-bs-toggle="modal" data-bs-target="#deleteConfirmationModal" data-group-id="<?= $row['group_id'] ?>">
-                                                <i class="fa-solid fa-trash-can  m-1"></i>
+                                            <button class="btn text-danger view-mode" id="deleteGroupBtn" type="button"
+                                                data-bs-toggle="modal" data-bs-target="#deleteConfirmationModal"
+                                                data-group-id="<?= $row['group_id'] ?>">
+                                                <i class="fa-solid fa-trash-can  m-1 tooltips" data-bs-toggle="tooltip" data-bs-placement="top" title="Delete Group"></i>
                                             </button>
                                             <div class="edit-mode d-none d-flex justify-content-center">
                                                 <button type="submit" class="btn btn-sm px-2 btn-success mx-1">
-                                                    <div class="d-flex justify-content-center"><i role="button" class="fa-solid fa-check text-white m-1"></i> Edit </div>
+                                                    <div class="d-flex justify-content-center"><i role="button"
+                                                            class="fa-solid fa-check text-white m-1"></i> Edit </div>
                                                 </button>
                                                 <button type="button" class="btn btn-sm px-2 btn-danger mx-1 edit-btn">
-                                                    <div class="d-flex justify-content-center"> <i role="button" class="fa-solid fa-xmark  text-white m-1"></i>Cancel </div>
+                                                    <div class="d-flex justify-content-center"> <i role="button"
+                                                            class="fa-solid fa-xmark  text-white m-1"></i>Cancel </div>
                                                 </button>
                                             </div>
                                         </td>
@@ -225,17 +252,32 @@ if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST['newGroupName']) && is
             </div>
             <div class="col-lg-2 order-1 order-lg-2">
                 <div class="d-none d-lg-block">
-                    <div class="bg-light d-flex justify-content-center flex-column align-items-center rounded-3 p-4 shadow-lg">
-                        <button class="btn signature-btn p-3 col-10 d-flex flex-column justify-content-center align-items-center col-6 col-lg-12" id="addGroupModalBtn" data-bs-toggle="modal" data-bs-target="#addGroupModal"><span class="d-flex align-items-center"><i class="fa-solid fa-user-group fa-3x text-dark"></i><i class="fa-solid fa-bold fa-plus text-dark fa-xl"></i></span><span class="mt-2 text-dark fw-bold"> Add New Group </span></button>
-                        <a href="?page=manageUsers" class="btn signature-btn p-3 col-10 d-flex flex-column justify-content-center align-items-center col-6 col-lg-12 mt-3"><i class="fa-solid fa-user fa-3x signature-color"></i><span class="mt-2 signature-color fw-bold"> Manage Users </span></a>
-                        <a href="?page=manageFolders" class="btn signature-btn p-3 col-10 d-flex flex-column justify-content-center align-items-center col-6 col-lg-12 mt-3"><i class="fa-solid fa-folder fa-3x text-warning"></i><span class="mt-2 text-warning fw-bold"> Manage Folders </span></a>
+                    <div
+                        class="bg-light d-flex justify-content-center flex-column align-items-center rounded-3 p-4 shadow-lg">
+                        <button
+                            class="btn signature-btn p-3 col-10 d-flex flex-column justify-content-center align-items-center col-6 col-lg-12"
+                            id="addGroupModalBtn" data-bs-toggle="modal" data-bs-target="#addGroupModal"><span
+                                class="d-flex align-items-center"><i
+                                    class="fa-solid fa-user-group fa-3x text-dark"></i><i
+                                    class="fa-solid fa-bold fa-plus text-dark fa-xl"></i></span><span
+                                class="mt-2 text-dark fw-bold"> Add New Group </span></button>
+                        <a href="?page=manageUsers"
+                            class="btn signature-btn p-3 col-10 d-flex flex-column justify-content-center align-items-center col-6 col-lg-12 mt-3"><i
+                                class="fa-solid fa-user fa-3x signature-color"></i><span
+                                class="mt-2 signature-color fw-bold"> Manage Users </span></a>
+                        <a href="?page=manageFolders"
+                            class="btn signature-btn p-3 col-10 d-flex flex-column justify-content-center align-items-center col-6 col-lg-12 mt-3"><i
+                                class="fa-solid fa-folder fa-3x text-warning"></i><span
+                                class="mt-2 text-warning fw-bold"> Manage Folders </span></a>
                     </div>
                 </div>
                 <div class="col-12 d-lg-none bg-white rounded-3 p-4 mb-4 shadow-lg">
                     <div class="row">
                         <div class="col-12 col-md-4 mb-3 mb-md-0">
-                            <button class="btn signature-btn p-3 w-100" id="addGroupModalBtnMobile" data-bs-toggle="modal" data-bs-target="#addGroupModal">
-                                <i class="fa-solid fa-user-group fa-lg text-dark"></i><i class="fa-solid fa-plus text-dark fa-2xs fw-bold"></i>
+                            <button class="btn signature-btn p-3 w-100" id="addGroupModalBtnMobile"
+                                data-bs-toggle="modal" data-bs-target="#addGroupModal">
+                                <i class="fa-solid fa-user-group fa-lg text-dark"></i><i
+                                    class="fa-solid fa-plus text-dark fa-2xs fw-bold"></i>
                                 <span class="text-dark fw-bold">Add New Group</span>
                             </button>
                         </div>
@@ -258,7 +300,8 @@ if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST['newGroupName']) && is
     </div>
 
     <!-- Delete Confirmation Modal -->
-    <div class="modal fade" id="deleteConfirmationModal" tabindex="-1" role="dialog" aria-labelledby="deleteConfirmationModalLabel" aria-hidden="true">
+    <div class="modal fade" id="deleteConfirmationModal" tabindex="-1" role="dialog"
+        aria-labelledby="deleteConfirmationModalLabel" aria-hidden="true">
         <div class="modal-dialog">
             <div class="modal-content">
                 <div class="modal-header">
@@ -266,7 +309,7 @@ if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST['newGroupName']) && is
                     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
                 <div class="modal-body">
-                    Are you sure you want to delete this user?
+                    Are you sure you want to delete this group?
                 </div>
                 <div class="modal-footer">
                     <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
@@ -291,9 +334,10 @@ if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST['newGroupName']) && is
                            JOIN employees ON users.employee_id = employees.employee_id
                            WHERE users_groups.group_id = $group_id";
         $user_group_result = $conn->query($user_group_sql);
-    ?>
+        ?>
         <!-- Member Modal for each group -->
-        <div class="modal fade" id="memberModal<?= $group_id ?>" tabindex="-1" role="dialog" aria-labelledby="memberModalLabel<?= $group_id ?>" aria-hidden="true">
+        <div class="modal fade" id="memberModal<?= $group_id ?>" tabindex="-1" role="dialog"
+            aria-labelledby="memberModalLabel<?= $group_id ?>" aria-hidden="true">
             <div class="modal-dialog modal-xl">
                 <div class="modal-content">
                     <div class="modal-header">
@@ -311,13 +355,16 @@ if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST['newGroupName']) && is
                                     </tr>
                                 </thead>
                                 <tbody>
-                                    <?php while ($user_row = $user_group_result->fetch_assoc()) : ?>
+                                    <?php while ($user_row = $user_group_result->fetch_assoc()): ?>
                                         <tr>
                                             <td class="py-4 align-middle text-center"><?= $user_row['employee_id'] ?></td>
-                                            <td class="py-4 align-middle text-center"><?= $user_row['first_name'] . " " . $user_row['last_name'] ?></td>
+                                            <td class="py-4 align-middle text-center">
+                                                <?= $user_row['first_name'] . " " . $user_row['last_name'] ?>
+                                            </td>
                                             <td class="py-4 align-middle text-center">
                                                 <form method="POST">
-                                                    <input type="hidden" name="userGroupIdToRemove" value=<?= $user_row['user_group_id'] ?> />
+                                                    <input type="hidden" name="userGroupIdToRemove"
+                                                        value=<?= $user_row['user_group_id'] ?> />
                                                     <button class="btn btn-danger btn-sm"> Remove</button>
                                                 </form>
                                             </td>
@@ -330,7 +377,7 @@ if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST['newGroupName']) && is
                 </div>
             </div>
         </div>
-    <?php
+        <?php
     }
     ?>
 
@@ -348,9 +395,10 @@ if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST['newGroupName']) && is
                            LEFT JOIN users_groups ON users.user_id = users_groups.user_id AND users_groups.group_id = $group_id
                            WHERE users_groups.group_id IS NULL";
         $user_group_result = $conn->query($user_group_sql);
-    ?>
+        ?>
         <!-- Add Member to Group Modal for each group -->
-        <div class="modal fade" id="addMemberToGroupModal<?= $group_id ?>" tabindex="-1" role="dialog" aria-labelledby="addMemberToGroupModalLabel<?= $group_id ?>" aria-hidden="true">
+        <div class="modal fade" id="addMemberToGroupModal<?= $group_id ?>" tabindex="-1" role="dialog"
+            aria-labelledby="addMemberToGroupModalLabel<?= $group_id ?>" aria-hidden="true">
             <div class="modal-dialog modal-lg">
                 <div class="modal-content">
                     <div class="modal-header">
@@ -368,7 +416,8 @@ if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST['newGroupName']) && is
                                 <label for="searchUsers" class="form-label">Search Users</label>
                                 <div class="input-group">
                                     <span class="input-group-text"><i class="fa-solid fa-magnifying-glass"></i></span>
-                                    <input type="text" class="form-control" id="searchUsers<?= $group_id ?>" name="searchUsers" placeholder="Search Users">
+                                    <input type="text" class="form-control" id="searchUsers<?= $group_id ?>"
+                                        name="searchUsers" placeholder="Search Users">
                                 </div>
                             </div>
                             <div class="mt-4">
@@ -383,23 +432,31 @@ if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST['newGroupName']) && is
                                             </tr>
                                         </thead>
                                         <tbody id="userList<?= $group_id ?>">
-                                            <?php while ($user_row = $user_group_result->fetch_assoc()) : ?>
+                                            <?php while ($user_row = $user_group_result->fetch_assoc()): ?>
                                                 <tr>
-                                                    <td class="align-middle text-center"><input class="form-check-input" type="checkbox" value="<?= $user_row['user_id'] ?>" name="selectedUsers[]" onchange="updateSelectedUsers(<?= $group_id ?>, this)"></td>
-                                                    <td class="py-4 align-middle text-center"><?= $user_row['employee_id'] ?></td>
-                                                    <td class="py-4 align-middle text-center"><?= $user_row['first_name'] . " " . $user_row['last_name'] ?></td>
+                                                    <td class="align-middle text-center"><input class="form-check-input"
+                                                            type="checkbox" value="<?= $user_row['user_id'] ?>"
+                                                            name="selectedUsers[]"
+                                                            onchange="updateSelectedUsers(<?= $group_id ?>, this)"></td>
+                                                    <td class="py-4 align-middle text-center"><?= $user_row['employee_id'] ?>
+                                                    </td>
+                                                    <td class="py-4 align-middle text-center">
+                                                        <?= $user_row['first_name'] . " " . $user_row['last_name'] ?>
+                                                    </td>
                                                 </tr>
                                             <?php endwhile; ?>
                                         </tbody>
                                     </table>
                                 </div>
                             </div>
-                            <div class="mt-4 p-3 background-color rounded-3 shadow-lg" id="selectedUsersSection<?= $group_id ?>" style="display: none;">
+                            <div class="mt-4 p-3 background-color rounded-3 shadow-lg"
+                                id="selectedUsersSection<?= $group_id ?>" style="display: none;">
                                 <p class="mb-1 signature-color fw-bold">Selected Users</p>
                                 <ul id="selectedUsersList<?= $group_id ?>" class="list-group"></ul>
                             </div>
                             <div class="d-flex justify-content-center">
-                                <button type="button" class="btn btn-dark mt-3" onclick="submitForm(<?= $group_id ?>)"><i class="fa-solid fa-plus"></i> Add Member</button>
+                                <button type="button" class="btn btn-dark mt-3" onclick="submitForm(<?= $group_id ?>)"><i
+                                        class="fa-solid fa-plus"></i> Add Member</button>
                             </div>
                         </form>
                     </div>
@@ -437,7 +494,7 @@ if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST['newGroupName']) && is
             function submitForm(group_id) {
                 var selectedUsers = [];
                 var checkboxes = document.querySelectorAll('#userList' + group_id + ' input[type="checkbox"]');
-                checkboxes.forEach(function(checkbox) {
+                checkboxes.forEach(function (checkbox) {
                     if (checkbox.checked) {
                         selectedUsers.push(checkbox.value);
                     }
@@ -447,7 +504,7 @@ if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST['newGroupName']) && is
             }
 
             // JavaScript for search functionality
-            document.getElementById('searchUsers<?= $group_id ?>').addEventListener('input', function() {
+            document.getElementById('searchUsers<?= $group_id ?>').addEventListener('input', function () {
                 var input, filter, table, tr, td1, td2, i, txtValue1, txtValue2;
                 input = document.getElementById('searchUsers<?= $group_id ?>');
                 filter = input.value.toUpperCase();
@@ -468,12 +525,13 @@ if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST['newGroupName']) && is
                 }
             });
         </script>
-    <?php
+        <?php
     }
     ?>
 
     <!-- Add Group Modal-->
-    <div class="modal fade" id="addGroupModal" tabindex="-1" role="dialog" aria-labelledby="addGroupModalLabel" aria-hidden="true">
+    <div class="modal fade" id="addGroupModal" tabindex="-1" role="dialog" aria-labelledby="addGroupModalLabel"
+        aria-hidden="true">
         <form method="POST">
             <div class="modal-dialog">
                 <div class="modal-content">
@@ -492,7 +550,8 @@ if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST['newGroupName']) && is
                             <label for="searchUsersForNewGroup" class="form-label">Search Users</label>
                             <div class="input-group mb-3 ">
                                 <span class="input-group-text"><i class="fa-solid fa-magnifying-glass"></i></span>
-                                <input type="text" class="form-control" id="searchUsersForNewGroup" name="searchUsersForNewGroup" placeholder="Search Users">
+                                <input type="text" class="form-control" id="searchUsersForNewGroup"
+                                    name="searchUsersForNewGroup" placeholder="Search Users">
                             </div>
                             <div class="table-responsive rounded-3 shadow-lg bg-light m-0">
                                 <table class="table table-hover mb-0 pb-0" id="newMemberList">
@@ -507,20 +566,27 @@ if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST['newGroupName']) && is
                                         <?php
                                         $available_users_sql = "SELECT * FROM users JOIN employees ON users.employee_id = employees.employee_id WHERE user_id";
                                         $available_users_result = $conn->query($available_users_sql);
-                                        while ($user_row = $available_users_result->fetch_assoc()) :
-                                        ?>
+                                        while ($user_row = $available_users_result->fetch_assoc()):
+                                            ?>
                                             <tr>
-                                                <td class="align-middle text-center"><input class="form-check-input" type="checkbox" value="<?= $user_row['user_id'] ?>" name="selectedUsersToNewGroup[]" onchange="updateSelectedMembers(this)">
+                                                <td class="align-middle text-center"><input class="form-check-input"
+                                                        type="checkbox" value="<?= $user_row['user_id'] ?>"
+                                                        name="selectedUsersToNewGroup[]"
+                                                        onchange="updateSelectedMembers(this)">
                                                 </td>
-                                                <td class=" py-4 align-middle text-center"><?= $user_row['employee_id'] ?></td>
-                                                <td class="py-4 align-middle text-center"><?= $user_row['first_name'] . " " . $user_row['last_name'] ?></td>
+                                                <td class=" py-4 align-middle text-center"><?= $user_row['employee_id'] ?>
+                                                </td>
+                                                <td class="py-4 align-middle text-center">
+                                                    <?= $user_row['first_name'] . " " . $user_row['last_name'] ?>
+                                                </td>
                                             </tr>
                                         <?php endwhile; ?>
                                     </tbody>
                                 </table>
                             </div>
                         </div>
-                        <div class="mt-4 p-3 background-color rounded-3 shadow-lg" id="selectedUsersSection" style="display: none;">
+                        <div class="mt-4 p-3 background-color rounded-3 shadow-lg" id="selectedUsersSection"
+                            style="display: none;">
                             <p class="mb-1 signature-color fw-bold">Selected Users</p>
                             <ul id="selectedUsersList" class="list-group"></ul>
                         </div>
@@ -534,6 +600,62 @@ if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST['newGroupName']) && is
             </div>
         </form>
     </div>
+
+    <!-- Show Folder Access Modal -->
+    <?php
+    // Fetching users for each group
+    $groups_result->data_seek(0);
+    while ($group_row = $groups_result->fetch_assoc()) {
+        $group_id = $group_row['group_id'];
+        $group_folder_sql = "SELECT *
+                           FROM groups_folders 
+                           JOIN folders ON groups_folders.folder_id = folders.folder_id
+                           WHERE groups_folders.group_id = $group_id";
+        $group_folder_result = $conn->query($group_folder_sql);
+        ?>
+        <!-- Member Modal for each group -->
+        <div class="modal fade" id="folderModal<?= $group_id ?>" tabindex="-1" role="dialog"
+            aria-labelledby="folderModalLabel<?= $group_id ?>" aria-hidden="true">
+            <div class="modal-dialog modal-xl">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title" id="folderModalLabel<?= $group_id ?>">Folder Access</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                    </div>
+                    <div class="modal-body">
+                        <div class="table-responsive rounded-3 shadow-lg bg-light m-3">
+                            <table class="table table-hover mb-0 pb-0">
+                                <thead class="text-center">
+                                    <tr>
+                                        <th class="py-4 align-middle">Folder Name</th>
+                                        <th class="py-4 align-middle">Action</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <?php while ($folder_row = $group_folder_result->fetch_assoc()): ?>
+                                        <tr>
+                                            <td class="py-4 align-middle text-center">
+                                                <?= $folder_row['folder_name'] ?>
+                                            </td>
+                                            <td class="py-4 align-middle text-center">
+                                                <form method="POST">
+                                                    <input type="hidden" name="groupFolderIdToRemove"
+                                                        value="<?= $folder_row['group_folder_id'] ?>" />
+                                                    <button class="btn btn-danger btn-sm"> Remove Folder Access </button>
+                                                </form>
+                                            </td>
+                                        </tr>
+                                    <?php endwhile; ?>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <?php
+    }
+    ?>
 
     <script>
         function updateSelectedMembers(checkbox) {
@@ -563,7 +685,7 @@ if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST['newGroupName']) && is
         }
 
         // Javascript for search functionality
-        document.getElementById('searchUsersForNewGroup').addEventListener('input', function() {
+        document.getElementById('searchUsersForNewGroup').addEventListener('input', function () {
             var input, filter, table, tr, td1, td2, i, txtValue1, txtValue2;
             input = document.getElementById('searchUsersForNewGroup');
             filter = input.value.toUpperCase();
@@ -586,10 +708,10 @@ if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST['newGroupName']) && is
     </script>
 
     <script>
-        document.addEventListener("DOMContentLoaded", function() {
+        document.addEventListener("DOMContentLoaded", function () {
             // Edit button click event handler
-            document.querySelectorAll('.edit-btn').forEach(function(btn) {
-                btn.addEventListener('click', function() {
+            document.querySelectorAll('.edit-btn').forEach(function (btn) {
+                btn.addEventListener('click', function () {
                     // Get the parent row
                     var row = this.closest('tr');
 
@@ -597,7 +719,7 @@ if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST['newGroupName']) && is
                     row.classList.toggle('editing');
 
                     // Toggle visibility of view and edit elements
-                    row.querySelectorAll('.view-mode, .edit-mode').forEach(function(elem) {
+                    row.querySelectorAll('.view-mode, .edit-mode').forEach(function (elem) {
                         elem.classList.toggle('d-none');
                     });
                 });
@@ -606,10 +728,10 @@ if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST['newGroupName']) && is
     </script>
 
     <script>
-        document.addEventListener("DOMContentLoaded", function() {
+        document.addEventListener("DOMContentLoaded", function () {
             // Button click event for the delete confirmation modal button
-            document.querySelectorAll('#deleteGroupBtn').forEach(function(button) {
-                button.addEventListener('click', function() {
+            document.querySelectorAll('#deleteGroupBtn').forEach(function (button) {
+                button.addEventListener('click', function () {
                     var groupIdToDelete = button.getAttribute('data-group-id');
 
                     // Populate the Group Id to the delete confirmation modal
@@ -617,6 +739,14 @@ if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST['newGroupName']) && is
                 })
             });
         });
+    </script>
+
+    <script>
+        // Enabling the tooltip
+        const tooltips = document.querySelectorAll('.tooltips');
+        tooltips.forEach(t => {
+            new bootstrap.Tooltip(t);
+        })
     </script>
 </body>
 

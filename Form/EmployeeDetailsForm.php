@@ -219,7 +219,7 @@ VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
             </div>
 
             <div class="d-flex justify-content-center mt-5">
-                <button class="btn signature-btn">Add Employee</button>
+                <button class="btn btn-dark">Add Employee</button>
             </div>
         </form>
     </div>

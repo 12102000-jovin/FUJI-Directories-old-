@@ -125,60 +125,53 @@ if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST['wages_id'])) {
 }
 
 // ========================= D E L E T E  P R O F I L E  I M A G E =========================
+
 if ($_SERVER["REQUEST_METHOD"] === "POST") {
     if (isset($_POST['deleteProfileImage'])) {
         // Handle profile image deletion
-        if (isset($_POST['profileImageToDeleteEmpId'])) {
-            $profileImageToDeleteEmpId = $_POST['profileImageToDeleteEmpId'];
-
-            echo $profileImageToDeleteEmpId;
-
-            $delete_profile_image_sql = "UPDATE employees SET profile_image = NULL where employee_id = ?";
-            $delete_profile_image_stmt = $conn->prepare($delete_profile_image_sql);
-            $delete_profile_image_stmt->bind_param("i", $profileImageToDeleteEmpId);
-
-            if ($delete_profile_image_stmt->execute()) {
-                echo "Profile image deleted successfully.";
-                header("Location: " . $_SERVER['PHP_SELF'] . '?employee_id=' . $employeeId);
-                exit();
-            } else {
-                echo "Error deleting profile image: " . $conn->error;
-            }
-            $delete_profile_image_stmt->close();
+        $profileImageToDeleteEmpId = $_POST['profileImageToDeleteEmpId'];
+        $delete_profile_image_sql = "UPDATE employees SET profile_image = NULL WHERE employee_id = ?";
+        $delete_profile_image_stmt = $conn->prepare($delete_profile_image_sql);
+        $delete_profile_image_stmt->bind_param("i", $profileImageToDeleteEmpId);
+        
+        if ($delete_profile_image_stmt->execute()) {
+            echo "Profile image deleted successfully.";
+            header("Location: " . $_SERVER['PHP_SELF'] . '?employee_id=' . $profileImageToDeleteEmpId);
+            exit();
+        } else {
+            echo "Error deleting profile image: " . $conn->error;
         }
-    } else // Handle profile image change
-        if (isset($_FILES['profileImageToEdit'])) {
-            $profileImage = $_FILES['profileImageToEdit'];
-
-            // Extract file extension
-            $imageExtension = pathinfo($profileImage["name"], PATHINFO_EXTENSION);
-
-            // Generate the new filename based on employee ID
-            $newFileName = $employeeId . '_profiles.' . $imageExtension;
-
-            $imagePath = "../Images/ProfilePhotos/" . $newFileName;
-            move_uploaded_file($profileImage["tmp_name"], $imagePath);
-
+        $delete_profile_image_stmt->close();
+    } elseif (isset($_POST['changeProfileImage'])) {
+        // Handle profile image change
+        $profileImageToDeleteEmpId = $_POST['profileImageToDeleteEmpId'];
+        $profileImage = $_FILES['profileImageToEdit'];
+        
+        // Process the uploaded file
+        $imageExtension = pathinfo($profileImage["name"], PATHINFO_EXTENSION);
+        $newFileName = $profileImageToDeleteEmpId . '_profiles.' . $imageExtension;
+        $imagePath = "../Images/ProfilePhotos/" . $newFileName;
+        
+        if (move_uploaded_file($profileImage["tmp_name"], $imagePath)) {
             // Encode the image before insertion
             $encodedImage = base64_encode(file_get_contents($imagePath));
-
-            // Update $profileImage variable with the new encoded image data
-            $profileImage = $encodedImage;
+            
+            // Update database with new image
+            $sql = "UPDATE employees SET profile_image = ? WHERE employee_id = ?";
+            $stmt = $conn->prepare($sql);
+            $stmt->bind_param("si", $encodedImage, $profileImageToDeleteEmpId);
+            
+            if ($stmt->execute()) {
+                echo "Profile image changed successfully.";
+                header("Location: " . $_SERVER['PHP_SELF'] . '?employee_id=' . $profileImageToDeleteEmpId);
+                exit();
+            } else {
+                echo "Error updating profile image: " . $conn->error;
+            }
+            $stmt->close();
         } else {
-            $encodedImage = 'test';
+            echo "File upload failed.";
         }
-
-    // Construct SQL query to update profile image
-    $sql = "UPDATE employees SET profile_image = ? WHERE employee_id = ?";
-    $stmt = $conn->prepare($sql);
-    $stmt->bind_param("si", $encodedImage, $employeeId);
-
-    if ($stmt->execute()) {
-        echo "Profile image changed successfully.";
-        header("Location: " . $_SERVER['PHP_SELF'] . '?employee_id=' . $employeeId);
-        exit();
-    } else {
-        echo "Error updating profile image: " . $conn->error;
     }
 }
 ?>
@@ -417,7 +410,8 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
                         <div class="p-3">
                             <div class="d-flex justify-content-between">
                                 <p class="fw-bold signature-color">Policies</p>
-                                <p type="button"><i class="fa-solid fa-plus signature-color"></i></p>
+                                <p type="button"><i class="fa-solid fa-plus signature-color" data-bs-toggle="modal"
+                                        data-bs-target="#addPoliciesModal"></i></p>
                             </div>
 
                             <a href="http://localhost/FUJI-Directories/CheckDirectory/Sample_Smoking_Policy.jpeg"> Smoking
@@ -618,7 +612,6 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
                                 </div>
                                 <div class="px-5">
                                     <!-- ================== Edit Profile Form ================== -->
-
                                     <div>
                                         <p class=" signature-color fw-bold mt-5"> Personal Details</p>
                                         <div class="row">
@@ -654,7 +647,7 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
                                                                 <label for="profileImageToEdit" class="fw-bold">Profile
                                                                     Image</label>
                                                                 <input type="file" id="profileImageToEdit"
-                                                                    name="profileImageToEdit" class="form-control">
+                                                                    name="profileImageToEdit" class="form-control required">
                                                                 <button type="submit" class="btn btn-sm btn-danger mt-2"
                                                                     name="deleteProfileImage">Delete Profile Image</button>
                                                                 <button type="submit" class="btn btn-sm btn-dark mt-2"
@@ -664,6 +657,11 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
                                                     </div>
                                                 </div>
                                             </div>
+
+                                            <div class="d-flex justify-content-center">
+                                                <hr style="width:100%" />
+                                            </div>
+
                                             <form method="POST" enctype="multipart/form-data">
                                                 <input type="hidden" name="employeeIdToEdit"
                                                     value="<?php echo $employeeId ?>">
@@ -710,113 +708,133 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
                                                     </div>
                                                 </div>
                                         </div>
-
-                                        <div class="row">
-                                            <p class=" signature-color fw-bold mt-5"> Contacts</p>
-
-                                            <div class="form-group col-md-12">
-                                                <label for="address" class="fw-bold">Address</label>
-                                                <input type="text" class="form-control" id="address" name="address"
-                                                    value="<?php echo (isset($address) && $address !== "" ? $address : "") ?>"
-                                                    ;>
-                                            </div>
-
-                                            <div class=" form-group col-md-12 mt-3">
-                                                <label for="email" class="fw-bold">Email</label>
-                                                <input type="text" class="form-control" id="email" name="email"
-                                                    value="<?php echo (isset($email) && $email !== "" ? $email : "") ?>">
-                                            </div>
-
-                                            <div class="form-group col-md-6 mt-3">
-                                                <label for="phoneNumber" class="fw-bold">Phone Number</label>
-                                                <input type="text" class="form-control" id="phoneNumber" name="phoneNumber"
-                                                    value="<?php echo (isset($phoneNumber) && $phoneNumber !== "" ? $phoneNumber : "") ?>">
-                                            </div>
-
-                                            <div class="form-group col-md-6 mt-3">
-                                                <label for="emergencyContact" class="fw-bold">Emergency Contact</label>
-                                                <input type="text" class="form-control" id="emergencyContact"
-                                                    name="emergencyContact"
-                                                    value="<?php echo (isset($emergencyContact) && $emergencyContact !== "" ? $emergencyContact : "") ?>">
-                                            </div>
-                                        </div>
-
-                                        <div class="row">
-                                            <p class=" signature-color fw-bold mt-5"> Employment Details</p>
-                                            <div class="form-group col-md-3 ">
-                                                <label for="employeeId" class="fw-bold">Employee Id</label>
-                                                <input type="number" class="form-control" id="employeeId" name="employeeId"
-                                                    value="<?php echo (isset($employeeId) && $employeeId !== "" ? $employeeId : "") ?>">
-                                            </div>
-
-                                            <div class="form-group col-md-4">
-                                                <label for="startDate" class="fw-bold mt-3 mt-md-0">Date Hired</label>
-                                                <input type="date" class="form-control" id="startDate" name="startDate"
-                                                    value="<?php echo (isset($startDate) && $startDate !== "" ? $startDate : "") ?>">
-                                            </div>
-                                            <div class=" form-group col-md-5">
-                                                <label for="employmentStatus" class="fw-bold mt-3 mt-md-0">Employment
-                                                    Type</label>
-                                                <select class="form-select" aria-label="Employment Status"
-                                                    name="employmentType">
-                                                    <option disabled selected hidden> </option>
-                                                    <option value="permanent" <?php if (isset($employmentType) && $employmentType == "Permanent")
-                                                        echo "selected"; ?>>Permanent</option>
-                                                    <option value="partTime" <?php if (isset($employmentType) && $employmentType == "Part-Time")
-                                                        echo "selected"; ?>>Part-Time</option>
-                                                    <option value="casual" <?php if (isset($employmentType) && $employmentType == "Casual")
-                                                        echo "selected"; ?>>Casual</option>
-                                                </select>
-                                            </div>
-
-                                            <div class="form-group col-md-4 mt-3">
-                                                <label for="department" class="fw-bold">Department</label>
-                                                <select class="form-select" aria-label="deparment" name="department">
-                                                    <option disabled selected hidden> </option>
-                                                    <option value="electrical" <?php if (isset($department) && $department == "Electrical")
-                                                        echo "selected"; ?>>Electrical</option>
-                                                    <option value="sheetMetal" <?php if (isset($department) && $department == "Sheet Metal")
-                                                        echo "selected"; ?>>Sheet Metal</option>
-                                                    <option value="office" <?php if (isset($department) && $department == "Office")
-                                                        echo "selected"; ?>>Office</option>
-                                                </select>
-                                            </div>
-
-                                            <div class="form-group col-md-5 mt-3">
-                                                <label for="position" class="fw-bold">Position</label>
-                                                <input type="text" class="form-control" id="position" name="position"
-                                                    value="<?php echo (isset($position) && $position !== "" ? $position : "") ?>">
-                                            </div>
-
-                                            <div class="form-group col-md-3 mt-3">
-                                                <label for="wage" class="fw-bold">Wage</label>
-                                                <div class="input-group">
-                                                    <span class="input-group-text rounded-start" id="wage">$</span>
-                                                    <input type="number" min="0" class="form-control"
-                                                        aria-describedby="wage">
-                                                </div>
-                                            </div>
-
-                                            <div class="form-group col-md-12 mt-3">
-                                                <label for="policy" class="fw-bold">Upload Policy Files</label>
-                                                <div class="input-group">
-                                                    <input type="file" id="policy" name="policy_files[]"
-                                                        class="form-control" multiple>
-                                                </div>
-                                            </div>
-                                        </div>
-
-                                        <div class="d-flex justify-content-center mt-5 mb-4">
-                                            <button class="btn btn-dark" role="submit">Edit Employee</button>
-                                        </div>
-                                        </form>
                                     </div>
+
+                                    <div class="row">
+                                        <p class=" signature-color fw-bold mt-5"> Contacts</p>
+
+                                        <div class="form-group col-md-12">
+                                            <label for="address" class="fw-bold">Address</label>
+                                            <input type="text" class="form-control" id="address" name="address"
+                                                value="<?php echo (isset($address) && $address !== "" ? $address : "") ?>"
+                                                ;>
+                                        </div>
+
+                                        <div class=" form-group col-md-12 mt-3">
+                                            <label for="email" class="fw-bold">Email</label>
+                                            <input type="text" class="form-control" id="email" name="email"
+                                                value="<?php echo (isset($email) && $email !== "" ? $email : "") ?>">
+                                        </div>
+
+                                        <div class="form-group col-md-6 mt-3">
+                                            <label for="phoneNumber" class="fw-bold">Phone Number</label>
+                                            <input type="text" class="form-control" id="phoneNumber" name="phoneNumber"
+                                                value="<?php echo (isset($phoneNumber) && $phoneNumber !== "" ? $phoneNumber : "") ?>">
+                                        </div>
+
+                                        <div class="form-group col-md-6 mt-3">
+                                            <label for="emergencyContact" class="fw-bold">Emergency Contact</label>
+                                            <input type="text" class="form-control" id="emergencyContact"
+                                                name="emergencyContact"
+                                                value="<?php echo (isset($emergencyContact) && $emergencyContact !== "" ? $emergencyContact : "") ?>">
+                                        </div>
+                                    </div>
+
+                                    <div class="row">
+                                        <p class=" signature-color fw-bold mt-5"> Employment Details</p>
+                                        <div class="form-group col-md-3 ">
+                                            <label for="employeeId" class="fw-bold">Employee Id</label>
+                                            <input type="number" class="form-control" id="employeeId" name="employeeId"
+                                                value="<?php echo (isset($employeeId) && $employeeId !== "" ? $employeeId : "") ?>">
+                                        </div>
+
+                                        <div class="form-group col-md-4">
+                                            <label for="startDate" class="fw-bold mt-3 mt-md-0">Date Hired</label>
+                                            <input type="date" class="form-control" id="startDate" name="startDate"
+                                                value="<?php echo (isset($startDate) && $startDate !== "" ? $startDate : "") ?>">
+                                        </div>
+                                        <div class=" form-group col-md-5">
+                                            <label for="employmentStatus" class="fw-bold mt-3 mt-md-0">Employment
+                                                Type</label>
+                                            <select class="form-select" aria-label="Employment Status"
+                                                name="employmentType">
+                                                <option disabled selected hidden> </option>
+                                                <option value="permanent" <?php if (isset($employmentType) && $employmentType == "Permanent")
+                                                    echo "selected"; ?>>Permanent</option>
+                                                <option value="partTime" <?php if (isset($employmentType) && $employmentType == "Part-Time")
+                                                    echo "selected"; ?>>Part-Time</option>
+                                                <option value="casual" <?php if (isset($employmentType) && $employmentType == "Casual")
+                                                    echo "selected"; ?>>Casual</option>
+                                            </select>
+                                        </div>
+
+                                        <div class="form-group col-md-4 mt-3">
+                                            <label for="department" class="fw-bold">Department</label>
+                                            <select class="form-select" aria-label="deparment" name="department">
+                                                <option disabled selected hidden> </option>
+                                                <option value="electrical" <?php if (isset($department) && $department == "Electrical")
+                                                    echo "selected"; ?>>Electrical</option>
+                                                <option value="sheetMetal" <?php if (isset($department) && $department == "Sheet Metal")
+                                                    echo "selected"; ?>>Sheet Metal</option>
+                                                <option value="office" <?php if (isset($department) && $department == "Office")
+                                                    echo "selected"; ?>>Office</option>
+                                            </select>
+                                        </div>
+
+                                        <div class="form-group col-md-5 mt-3">
+                                            <label for="position" class="fw-bold">Position</label>
+                                            <input type="text" class="form-control" id="position" name="position"
+                                                value="<?php echo (isset($position) && $position !== "" ? $position : "") ?>">
+                                        </div>
+
+                                        <div class="form-group col-md-12 mt-3">
+                                            <label for="policy" class="fw-bold">Upload Policy Files</label>
+                                            <div class="input-group">
+                                                <input type="file" id="policy" name="policy_files[]" class="form-control"
+                                                    multiple>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <div class="d-flex justify-content-center mt-5 mb-4">
+                                        <button class="btn btn-dark" role="submit">Edit Employee</button>
+                                    </div>
+                                    </form>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <!-- ================== Add Policies Modal ================== -->
+                <div class="modal fade" id="addPoliciesModal" tabindex="-1" aria-labelledby="addPoliciesModalLabel"
+                    aria-hidden="true">
+                    <div class="modal-dialog modal-lg">
+                        <div class="modal-content">
+                            <div class="modal-header">
+                                <h5 class="modal-title" id="addPoliciesModalLabel">Add Policies Document</h5>
+                                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                            </div>
+                            <div class="modal-body">
+                                <!-- Drag and Drop area -->
+                                <div class="border border-dashed p-4 text-center" id="dropZone">
+                                    <p class="mb-0">Drag & Drop your documents here or <br>
+                                        <button class="btn btn-primary btn-sm mt-2"
+                                            onclick="document.getElementById('fileInput').click()">Browse Files</button>
+                                    </p>
+                                    <input type="file" id="fileInput" class="d-none" multiple />
+                                </div>
+                                <!-- Display uploaded file names -->
+                                <div id="fileList" class="mt-3"></div>
+                                <div class="d-flex justify-content-center">
+                                    <button class="btn btn-dark btn-sm"> Add Documents</button>
                                 </div>
                             </div>
                         </div>
                     </div>
                 </div>
             </div>
+        </div>
+        </div>
         </div>
         <?php
                 }
@@ -842,7 +860,6 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
             });
         });
     </script>
-
 
     <script>
         document.addEventListener("DOMContentLoaded", function () {
@@ -875,6 +892,74 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
                 });
             });
         });
+    </script>
+
+    <script>
+        const dropZone = document.getElementById('dropZone');
+        const fileInput = document.getElementById('fileInput');
+        const fileList = document.getElementById('fileList');
+        let selectedFiles = [];
+
+        dropZone.addEventListener('dragover', function (event) {
+            event.preventDefault();
+            dropZone.classList.add('bg-light');
+        });
+
+        dropZone.addEventListener('dragleave', function () {
+            dropZone.classList.remove('bg-light');
+        });
+
+        dropZone.addEventListener('drop', function (event) {
+            event.preventDefault();
+            dropZone.classList.remove('bg-light');
+            const files = event.dataTransfer.files;
+            handleFiles(files);
+        });
+
+        fileInput.addEventListener('change', function (event) {
+            const files = event.target.files;
+            handleFiles(files);
+        });
+
+        function handleFiles(files) {
+            for (let i = 0; i < files.length; i++) {
+                addFile(files[i]);
+            }
+            renderFileList();
+        }
+
+        function addFile(file) {
+            selectedFiles.push(file);
+        }
+
+        function removeFile(index) {
+            selectedFiles.splice(index, 1);
+            renderFileList();
+        }
+
+        function renderFileList() {
+            fileList.innerHTML = '';
+            selectedFiles.forEach((file, index) => {
+                const listItem = document.createElement('div');
+                listItem.className = 'd-flex justify-content-between align-items-center border p-2 mb-2';
+                listItem.innerHTML = `
+                    <span>${file.name}</span>
+                    <button class="btn btn-danger btn-sm" onclick="removeFile(${index})">Remove</button>
+                `;
+                fileList.appendChild(listItem);
+            });
+        }
+
+        // Reset file input and selected files when the modal is closed
+        document.getElementById('addPoliciesModal').addEventListener('hidden.bs.modal', function () {
+            resetFileInput();
+        });
+
+        function resetFileInput() {
+            fileInput.value = ''; // Clear the file input
+            selectedFiles = []; // Clear the array of selected files
+            renderFileList(); // Clear the file list display
+        }
     </script>
 
     <script>

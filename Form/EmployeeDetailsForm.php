@@ -6,7 +6,6 @@ error_reporting(E_ALL);
 // Connect to the database
 require_once("db_connect.php");
 
-
 if ($_SERVER["REQUEST_METHOD"] === "POST") {
     // ================ P E R S O N A L   D E T A I L S ================ 
     $firstName = $_POST['firstName'];
@@ -50,7 +49,6 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
     } else {
         $encodedImage = ''; // Default empty image if no profile image is uploaded
     }
-
 
     // Prepare and execute SQL statement to insert data into 'employees' table
     $sql = "INSERT INTO employees (first_name, last_name, gender, dob, address, email, phone_number, emergency_contact_phone_number, employee_id, start_date, employment_type, department, position, pay_rate,  profile_image) 

@@ -27,7 +27,6 @@ $employee_group_access_sql = "SELECT DISTINCT groups.group_name, folders.folder_
 
 $employee_group_access_result = $conn->query($employee_group_access_sql);
 
-
 // Get the start date for the chart
 if ($employee_start_date_result->num_rows > 0) {
     while ($row = $employee_start_date_result->fetch_assoc()) {
@@ -78,7 +77,6 @@ if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST['newWage'])) {
 }
 
 // ========================= E D I T   W A G E  =========================
-
 if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST['editDate']) && isset($_POST['editWage'])) {
     $editDate = $_POST["editDate"];
     $editWage = $_POST["editWage"];
@@ -125,7 +123,6 @@ if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST['wages_id'])) {
 }
 
 // ========================= D E L E T E  P R O F I L E  I M A G E =========================
-
 if ($_SERVER["REQUEST_METHOD"] === "POST") {
     if (isset($_POST['deleteProfileImage'])) {
         // Handle profile image deletion
@@ -133,7 +130,7 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
         $delete_profile_image_sql = "UPDATE employees SET profile_image = NULL WHERE employee_id = ?";
         $delete_profile_image_stmt = $conn->prepare($delete_profile_image_sql);
         $delete_profile_image_stmt->bind_param("i", $profileImageToDeleteEmpId);
-        
+
         if ($delete_profile_image_stmt->execute()) {
             echo "Profile image deleted successfully.";
             header("Location: " . $_SERVER['PHP_SELF'] . '?employee_id=' . $profileImageToDeleteEmpId);
@@ -146,21 +143,21 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
         // Handle profile image change
         $profileImageToDeleteEmpId = $_POST['profileImageToDeleteEmpId'];
         $profileImage = $_FILES['profileImageToEdit'];
-        
+
         // Process the uploaded file
         $imageExtension = pathinfo($profileImage["name"], PATHINFO_EXTENSION);
         $newFileName = $profileImageToDeleteEmpId . '_profiles.' . $imageExtension;
         $imagePath = "../Images/ProfilePhotos/" . $newFileName;
-        
+
         if (move_uploaded_file($profileImage["tmp_name"], $imagePath)) {
             // Encode the image before insertion
             $encodedImage = base64_encode(file_get_contents($imagePath));
-            
+
             // Update database with new image
             $sql = "UPDATE employees SET profile_image = ? WHERE employee_id = ?";
             $stmt = $conn->prepare($sql);
             $stmt->bind_param("si", $encodedImage, $profileImageToDeleteEmpId);
-            
+
             if ($stmt->execute()) {
                 echo "Profile image changed successfully.";
                 header("Location: " . $_SERVER['PHP_SELF'] . '?employee_id=' . $profileImageToDeleteEmpId);
@@ -171,6 +168,42 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
             $stmt->close();
         } else {
             echo "File upload failed.";
+        }
+    }
+}
+
+// ========================= E D I T  P R O F I L E  =========================
+if ($_SERVER["REQUEST_METHOD"] == "POST") {
+    // Check if the form was submitted
+    if (isset($_POST['editEmployeeProfile'])) {
+        // Process the form data
+        $employeeIdToEdit = $_POST['employeeIdToEdit'];
+        $firstName = $_POST['firstName'];
+        $lastName = $_POST['lastName'];
+        $gender = $_POST['gender'];
+        $dob = $_POST['dob'];
+        $visaStatus = $_POST['visaStatus'];
+        $address = $_POST['address'];
+        $email = $_POST['email'];
+        $phoneNumber = $_POST['phoneNumber'];
+        $emergencyContactName = $_POST['emergencyContactName'];
+        $emergencyContact = $_POST['emergencyContact'];
+        $emergencyContactRelationship = $_POST['emergencyContactRelationship'];
+        $employeeId = $_POST['employeeId'];
+        $startDate = $_POST['startDate'];
+        $employmentType = $_POST['employmentType'];
+        $department = $_POST['department'];
+        $position = $_POST['position'];
+
+        $edit_employee_detail_sql = "UPDATE employees SET first_name = ?, last_name = ?, gender = ?, dob = ?, visa = ?, address = ?, email= ?, phone_number = ?, emergency_contact_name = ?, emergency_contact_phone_number = ?, emergency_contact_relationship = ?, start_date = ?, department = ?, employment_type = ?, position = ? WHERE employee_id = ?";
+        $edit_employee_detail_result = $conn->prepare($edit_employee_detail_sql);
+        $edit_employee_detail_result->bind_param("sssssssssssssssi", $firstName, $lastName, $gender, $dob, $visaStatus, $address, $email, $phoneNumber, $emergencyContactName, $emergencyContact, $emergencyContactRelationship, $startDate , $department, $employmentType, $position, $employeeIdToEdit);
+
+        if ($edit_employee_detail_result->execute()) {
+            header("Location: " . $_SERVER['PHP_SELF'] . '?employee_id=' . $employeeIdToEdit);
+            exit();
+        } else {
+            echo "Error: " . $edit_employee_detail_result . "<br>" . $conn->error;
         }
     }
 }
@@ -242,10 +275,14 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
                         $profileImage = $row['profile_image'];
                         $firstName = $row['first_name'];
                         $lastName = $row['last_name'];
+                        $visaStatus = $row['visa'];
                         $employeeId = $row['employee_id'];
                         $address = $row['address'];
                         $phoneNumber = $row['phone_number'];
+                        $emergencyContactName = $row['emergency_contact_name'];
+                        $emergencyContactRelationship = $row['emergency_contact_relationship'];
                         $emergencyContact = $row['emergency_contact_phone_number'];
+                        $plateNumber = $row['plate_number'];
                         $gender = $row['gender'];
                         $dob = $row['dob'];
                         $startDate = $row['start_date'];
@@ -311,6 +348,11 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
                                     <h5 class="fw-bold"><?php echo isset($dob) ? date("j F Y", strtotime($dob)) : "N/A"; ?>
                                     </h5>
                                 </div>
+                                <div class="col-lg-6 col-xl-3 d-flex flex-column">
+                                    <small>Visa Status</small>
+                                    <h5 class="fw-bold"><?php echo isset($visaStatus) ? $visaStatus : "N/A"; ?>
+                                    </h5>
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -332,6 +374,26 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
                                 <div class="col-lg-6 col-xl-3 d-flex flex-column">
                                     <small>Phone Number</small>
                                     <h5 class="fw-bold"><?php echo isset($phoneNumber) ? $phoneNumber : "N/A"; ?></h5>
+                                </div>
+                                <div class="col-lg-6 col-xl-3 d-flex flex-column">
+                                    <small>Plate Number</small>
+                                    <h5 class="fw-bold"><?php echo isset($plateNumber) ? $plateNumber : "N/A"; ?>
+                                    </h5>
+                                </div>
+                            </div>
+
+                            <p class="fw-bold signature-color mt-4">Emergency Contact</p>
+                            <div class="row">
+                                <div class="col-lg-6 col-xl-3 d-flex flex-column">
+                                    <small>Emergency Contact Name</small>
+                                    <h5 class="fw-bold">
+                                        <?php echo isset($emergencyContactName) ? $emergencyContactName : "N/A"; ?>
+                                    </h5>
+                                </div>
+                                <div class="col-lg-6 col-xl-3 d-flex flex-column">
+                                    <small>Emergency Contact Relationship</small>
+                                    <h5 class="fw-bold"><?php echo isset($emergencyContactRelationship) ? $emergencyContactRelationship : "N/A"; ?>
+                                    </h5>
                                 </div>
                                 <div class="col-lg-6 col-xl-3 d-flex flex-column">
                                     <small>Emergency Contact</small>
@@ -418,7 +480,6 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
                                 and Vaping Policy </a>
                         </div>
                     </div>
-
                     <div class="card bg-white border-0 rounded shadow-lg mt-4">
                         <div class="p-3">
                             <p class="fw-bold signature-color"> Access</p>
@@ -681,160 +742,183 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
                                                     <div class="form-group col-md-3 mt-3">
                                                         <label for="gender" class="fw-bold">Gender</label>
                                                         <select class="form-select" aria-label="gender" name="gender">
-                                                            <option disabled selected hidden> </option>
-                                                            <option value="male" <?php if (isset($gender) && $gender == "Male")
+                                                            <option disabled selected hidden></option>
+                                                            <option value="Male" <?php if (isset($gender) && $gender == "Male")
                                                                 echo "selected"; ?>>Male</option>
-                                                            <option value="female" <?php if (isset($gender) && $gender == "Female")
+                                                            <option value="Female" <?php if (isset($gender) && $gender == "Female")
                                                                 echo "selected"; ?>>Female</option>
                                                         </select>
                                                     </div>
-
-
                                                     <div class="form-group col-md-4 mt-3">
                                                         <label for="dob" class="fw-bold">Date of Birth</label>
                                                         <input type="date" name="dob" class="form-control" id="dob"
                                                             value="<?php echo (isset($dob) ? $dob : "") ?>">
                                                     </div>
-
                                                     <div class="form-group col-md-5 mt-3">
                                                         <label for="visaStatus" class="fw-bold">Visa Status</label>
                                                         <select class="form-select" aria-label="Visa Status"
                                                             name="visaStatus">
-                                                            <option disabled selected hidden> </option>
-                                                            <option value="PR">Permanent Resident</option>
-                                                            <option value="student">Student</option>
-                                                            <option value="WHV">Working Holiday</option>
+                                                            <option disabled selected hidden></option>
+                                                            <option value="Citizen" <?php if (isset($visaStatus) && $visaStatus === "Citizen")
+                                                                echo "selected"; ?>>Citizen
+                                                            </option>
+                                                            <option value="Permanent Resident" <?php if (isset($visaStatus) && $visaStatus == "Permanent Resident")
+                                                                echo "selected"; ?>>
+                                                                Permanent Resident</option>
+                                                            <option value="Student" <?php if (isset($visaStatus) && $visaStatus === "Student")
+                                                                echo "selected"; ?>>Student
+                                                            </option>
+                                                            <option value="Working Holiday" <?php if (isset($visaStatus) && $visaStatus === "Working Holiday")
+                                                                echo "selected"; ?>>Working Holiday
+                                                            </option>
                                                         </select>
                                                     </div>
                                                 </div>
+                                                <div class="row">
+                                                    <p class="signature-color fw-bold mt-5"> Contacts</p>
+                                                    <div class="form-group col-md-12">
+                                                        <label for="address" class="fw-bold">Address</label>
+                                                        <input type="text" class="form-control" id="address" name="address"
+                                                            value="<?php echo (isset($address) && $address !== "" ? $address : "") ?>">
+                                                    </div>
+                                                    <div class="form-group col-md-6 mt-3">
+                                                        <label for="email" class="fw-bold">Email</label>
+                                                        <input type="text" class="form-control" id="email" name="email"
+                                                            value="<?php echo (isset($email) && $email !== "" ? $email : "") ?>">
+                                                    </div>
+                                                    <div class="form-group col-md-6 mt-3">
+                                                        <label for="phoneNumber" class="fw-bold">Phone Number</label>
+                                                        <input type="text" class="form-control" id="phoneNumber"
+                                                            name="phoneNumber"
+                                                            value="<?php echo (isset($phoneNumber) && $phoneNumber !== "" ? $phoneNumber : "") ?>">
+                                                    </div>
+
+                                                    <p class="signature-color fw-bold mt-5"> Emergency Contacts</p>
+                                                    <div class="form-group col-md-6">
+                                                        <label for="emergencyContactName" class="fw-bold">Emergency
+                                                            Contact Name</label>
+                                                        <input type="text" class="form-control" id="emergencyContactName"
+                                                            name="emergencyContactName"
+                                                            value="<?php echo (isset($emergencyContactName) && $emergencyContactName !== "" ? $emergencyContactName : "") ?>">
+                                                    </div>
+                                                    <div class="form-group col-md-6">
+                                                        <label for="emergencyContactRelationship" class="fw-bold">Emergency
+                                                            Contact Relationship</label>
+                                                        <input type="text" class="form-control" id="emergencyContactRelationship"
+                                                            name="emergencyContactRelationship"
+                                                            value="<?php echo (isset($emergencyContactRelationship) && $emergencyContactRelationship !== "" ? $emergencyContactRelationship : "") ?>">
+                                                    </div>
+                                                    <div class="form-group col-md-6 mt-3">
+                                                        <label for="emergencyContact" class="fw-bold">Emergency
+                                                            Contact</label>
+                                                        <input type="text" class="form-control" id="emergencyContact"
+                                                            name="emergencyContact"
+                                                            value="<?php echo (isset($emergencyContact) && $emergencyContact !== "" ? $emergencyContact : "") ?>">
+                                                    </div>
+                                                </div>
+                                                <div class="row">
+                                                    <p class="signature-color fw-bold mt-5"> Employment Details</p>
+                                                    <div class="form-group col-md-3">
+                                                        <label for="employeeId" class="fw-bold">Employee Id</label>
+                                                        <input type="number" class="form-control" id="employeeId"
+                                                            name="employeeId"
+                                                            value="<?php echo (isset($employeeId) && $employeeId !== "" ? $employeeId : "") ?>">
+                                                    </div>
+                                                    <div class="form-group col-md-4">
+                                                        <label for="startDate" class="fw-bold mt-3 mt-md-0">Date
+                                                            Hired</label>
+                                                        <input type="date" class="form-control" id="startDate"
+                                                            name="startDate"
+                                                            value="<?php echo (isset($startDate) && $startDate !== "" ? $startDate : "") ?>">
+                                                    </div>
+                                                    <div class="form-group col-md-5">
+                                                        <label for="employmentStatus"
+                                                            class="fw-bold mt-3 mt-md-0">Employment Type</label>
+                                                        <select class="form-select" aria-label="Employment Status"
+                                                            name="employmentType">
+                                                            <option disabled selected hidden></option>
+                                                            <option value="Full-Time" <?php if (isset($employmentType) && $employmentType == "Full-Time")
+                                                                echo "selected"; ?>>Full-Time
+                                                            </option>
+                                                            <option value="Part-Time" <?php if (isset($employmentType) && $employmentType == "Part-Time")
+                                                                echo "selected"; ?>>Part-Time
+                                                            </option>
+                                                            <option value="Casual" <?php if (isset($employmentType) && $employmentType == "Casual")
+                                                                echo "selected"; ?>>Casual
+                                                            </option>
+                                                        </select>
+                                                    </div>
+                                                    <div class="form-group col-md-4 mt-3">
+                                                        <label for="department" class="fw-bold">Department</label>
+                                                        <select class="form-select" aria-label="deparment"
+                                                            name="department">
+                                                            <option disabled selected hidden></option>
+                                                            <option value="Electrical" <?php if (isset($department) && $department == "Electrical")
+                                                                echo "selected"; ?>>Electrical
+                                                            </option>
+                                                            <option value="Sheet Metal" <?php if (isset($department) && $department == "Sheet Metal")
+                                                                echo "selected"; ?>>Sheet Metal
+                                                            </option>
+                                                            <option value="Office" <?php if (isset($department) && $department == "Office")
+                                                                echo "selected"; ?>>Office</option>
+                                                        </select>
+                                                    </div>
+                                                    <div class="form-group col-md-5 mt-3">
+                                                        <label for="position" class="fw-bold">Position</label>
+                                                        <input type="text" class="form-control" id="position"
+                                                            name="position"
+                                                            value="<?php echo (isset($position) && $position !== "" ? $position : "") ?>">
+                                                    </div>
+                                                    <div class="form-group col-md-12 mt-3">
+                                                        <label for="policy" class="fw-bold">Upload Policy Files</label>
+                                                        <div class="input-group">
+                                                            <input type="file" id="policy" name="policy_files[]"
+                                                                class="form-control" multiple>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                                <div class="d-flex justify-content-center mt-5 mb-4">
+                                                    <button class="btn btn-dark" name="editEmployeeProfile"
+                                                        type="submit">Edit Employee</button>
+                                                </div>
+                                            </form>
                                         </div>
                                     </div>
-
-                                    <div class="row">
-                                        <p class=" signature-color fw-bold mt-5"> Contacts</p>
-
-                                        <div class="form-group col-md-12">
-                                            <label for="address" class="fw-bold">Address</label>
-                                            <input type="text" class="form-control" id="address" name="address"
-                                                value="<?php echo (isset($address) && $address !== "" ? $address : "") ?>"
-                                                ;>
-                                        </div>
-
-                                        <div class=" form-group col-md-12 mt-3">
-                                            <label for="email" class="fw-bold">Email</label>
-                                            <input type="text" class="form-control" id="email" name="email"
-                                                value="<?php echo (isset($email) && $email !== "" ? $email : "") ?>">
-                                        </div>
-
-                                        <div class="form-group col-md-6 mt-3">
-                                            <label for="phoneNumber" class="fw-bold">Phone Number</label>
-                                            <input type="text" class="form-control" id="phoneNumber" name="phoneNumber"
-                                                value="<?php echo (isset($phoneNumber) && $phoneNumber !== "" ? $phoneNumber : "") ?>">
-                                        </div>
-
-                                        <div class="form-group col-md-6 mt-3">
-                                            <label for="emergencyContact" class="fw-bold">Emergency Contact</label>
-                                            <input type="text" class="form-control" id="emergencyContact"
-                                                name="emergencyContact"
-                                                value="<?php echo (isset($emergencyContact) && $emergencyContact !== "" ? $emergencyContact : "") ?>">
-                                        </div>
-                                    </div>
-
-                                    <div class="row">
-                                        <p class=" signature-color fw-bold mt-5"> Employment Details</p>
-                                        <div class="form-group col-md-3 ">
-                                            <label for="employeeId" class="fw-bold">Employee Id</label>
-                                            <input type="number" class="form-control" id="employeeId" name="employeeId"
-                                                value="<?php echo (isset($employeeId) && $employeeId !== "" ? $employeeId : "") ?>">
-                                        </div>
-
-                                        <div class="form-group col-md-4">
-                                            <label for="startDate" class="fw-bold mt-3 mt-md-0">Date Hired</label>
-                                            <input type="date" class="form-control" id="startDate" name="startDate"
-                                                value="<?php echo (isset($startDate) && $startDate !== "" ? $startDate : "") ?>">
-                                        </div>
-                                        <div class=" form-group col-md-5">
-                                            <label for="employmentStatus" class="fw-bold mt-3 mt-md-0">Employment
-                                                Type</label>
-                                            <select class="form-select" aria-label="Employment Status"
-                                                name="employmentType">
-                                                <option disabled selected hidden> </option>
-                                                <option value="permanent" <?php if (isset($employmentType) && $employmentType == "Permanent")
-                                                    echo "selected"; ?>>Permanent</option>
-                                                <option value="partTime" <?php if (isset($employmentType) && $employmentType == "Part-Time")
-                                                    echo "selected"; ?>>Part-Time</option>
-                                                <option value="casual" <?php if (isset($employmentType) && $employmentType == "Casual")
-                                                    echo "selected"; ?>>Casual</option>
-                                            </select>
-                                        </div>
-
-                                        <div class="form-group col-md-4 mt-3">
-                                            <label for="department" class="fw-bold">Department</label>
-                                            <select class="form-select" aria-label="deparment" name="department">
-                                                <option disabled selected hidden> </option>
-                                                <option value="electrical" <?php if (isset($department) && $department == "Electrical")
-                                                    echo "selected"; ?>>Electrical</option>
-                                                <option value="sheetMetal" <?php if (isset($department) && $department == "Sheet Metal")
-                                                    echo "selected"; ?>>Sheet Metal</option>
-                                                <option value="office" <?php if (isset($department) && $department == "Office")
-                                                    echo "selected"; ?>>Office</option>
-                                            </select>
-                                        </div>
-
-                                        <div class="form-group col-md-5 mt-3">
-                                            <label for="position" class="fw-bold">Position</label>
-                                            <input type="text" class="form-control" id="position" name="position"
-                                                value="<?php echo (isset($position) && $position !== "" ? $position : "") ?>">
-                                        </div>
-
-                                        <div class="form-group col-md-12 mt-3">
-                                            <label for="policy" class="fw-bold">Upload Policy Files</label>
-                                            <div class="input-group">
-                                                <input type="file" id="policy" name="policy_files[]" class="form-control"
-                                                    multiple>
-                                            </div>
-                                        </div>
-                                    </div>
-
-                                    <div class="d-flex justify-content-center mt-5 mb-4">
-                                        <button class="btn btn-dark" role="submit">Edit Employee</button>
-                                    </div>
-                                    </form>
                                 </div>
                             </div>
                         </div>
-                    </div>
-                </div>
-                <!-- ================== Add Policies Modal ================== -->
-                <div class="modal fade" id="addPoliciesModal" tabindex="-1" aria-labelledby="addPoliciesModalLabel"
-                    aria-hidden="true">
-                    <div class="modal-dialog modal-lg">
-                        <div class="modal-content">
-                            <div class="modal-header">
-                                <h5 class="modal-title" id="addPoliciesModalLabel">Add Policies Document</h5>
-                                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-                            </div>
-                            <div class="modal-body">
-                                <!-- Drag and Drop area -->
-                                <div class="border border-dashed p-4 text-center" id="dropZone">
-                                    <p class="mb-0">Drag & Drop your documents here or <br>
-                                        <button class="btn btn-primary btn-sm mt-2"
-                                            onclick="document.getElementById('fileInput').click()">Browse Files</button>
-                                    </p>
-                                    <input type="file" id="fileInput" class="d-none" multiple />
-                                </div>
-                                <!-- Display uploaded file names -->
-                                <div id="fileList" class="mt-3"></div>
-                                <div class="d-flex justify-content-center">
-                                    <button class="btn btn-dark btn-sm"> Add Documents</button>
+                        <!-- ================== Add Policies Modal ================== -->
+                        <div class="modal fade" id="addPoliciesModal" tabindex="-1" aria-labelledby="addPoliciesModalLabel"
+                            aria-hidden="true">
+                            <div class="modal-dialog modal-lg">
+                                <div class="modal-content">
+                                    <div class="modal-header">
+                                        <h5 class="modal-title" id="addPoliciesModalLabel">Add Policies Document</h5>
+                                        <button type="button" class="btn-close" data-bs-dismiss="modal"
+                                            aria-label="Close"></button>
+                                    </div>
+                                    <div class="modal-body">
+                                        <!-- Drag and Drop area -->
+                                        <div class="border border-dashed p-4 text-center" id="dropZone">
+                                            <p class="mb-0">Drag & Drop your documents here or <br>
+                                                <button class="btn btn-primary btn-sm mt-2"
+                                                    onclick="document.getElementById('fileInput').click()">Browse
+                                                    Files</button>
+                                            </p>
+                                            <input type="file" id="fileInput" class="d-none" multiple />
+                                        </div>
+                                        <!-- Display uploaded file names -->
+                                        <div id="fileList" class="mt-3"></div>
+                                        <div class="d-flex justify-content-center">
+                                            <button class="btn btn-dark btn-sm"> Add Documents</button>
+                                        </div>
+                                    </div>
                                 </div>
                             </div>
                         </div>
                     </div>
                 </div>
             </div>
-        </div>
-        </div>
         </div>
         <?php
                 }

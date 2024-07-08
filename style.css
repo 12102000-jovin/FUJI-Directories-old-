@@ -29,7 +29,11 @@
 }
 
 /* ========================== White Background ========================== */
-
 .bg-white {
   background-color: white;
+}
+
+/* ========================== Gray Background ========================== */
+.bg-gray {
+  background-color: #f4f5f6;
 }

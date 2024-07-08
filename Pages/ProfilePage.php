@@ -173,7 +173,7 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
 }
 
 // ========================= E D I T  P R O F I L E  =========================
-if ($_SERVER["REQUEST_METHOD"] == "POST") {
+if ($_SERVER["REQUEST_METHOD"] === "POST") {
     // Check if the form was submitted
     if (isset($_POST['editEmployeeProfile'])) {
         // Process the form data
@@ -197,7 +197,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
 
         $edit_employee_detail_sql = "UPDATE employees SET first_name = ?, last_name = ?, gender = ?, dob = ?, visa = ?, address = ?, email= ?, phone_number = ?, emergency_contact_name = ?, emergency_contact_phone_number = ?, emergency_contact_relationship = ?, start_date = ?, department = ?, employment_type = ?, position = ? WHERE employee_id = ?";
         $edit_employee_detail_result = $conn->prepare($edit_employee_detail_sql);
-        $edit_employee_detail_result->bind_param("sssssssssssssssi", $firstName, $lastName, $gender, $dob, $visaStatus, $address, $email, $phoneNumber, $emergencyContactName, $emergencyContact, $emergencyContactRelationship, $startDate , $department, $employmentType, $position, $employeeIdToEdit);
+        $edit_employee_detail_result->bind_param("sssssssssssssssi", $firstName, $lastName, $gender, $dob, $visaStatus, $address, $email, $phoneNumber, $emergencyContactName, $emergencyContact, $emergencyContactRelationship, $startDate, $department, $employmentType, $position, $employeeIdToEdit);
 
         if ($edit_employee_detail_result->execute()) {
             header("Location: " . $_SERVER['PHP_SELF'] . '?employee_id=' . $employeeIdToEdit);
@@ -205,6 +205,66 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
         } else {
             echo "Error: " . $edit_employee_detail_result . "<br>" . $conn->error;
         }
+    }
+}
+
+// ========================= A D D  P O L I C I E S =========================
+if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST['policiesToSubmit'])) {
+    $policiesToSubmit = $_POST['policiesToSubmit'];
+
+    $folderName = $employeeId . "_policies";
+
+    $directory = "../Policies/";
+
+    // Check if the directory exists or create it if not
+    if (!is_dir($directory)) {
+        mkdir($directory, 0777, true); // Create directory recursively if it doesn't exist
+    }
+
+    // Check if the folder already exists
+    if (is_dir($directory . $folderName)) {
+        echo "Folder already exists.";
+    } else {
+        // Create new folder
+        if (mkdir($directory . $folderName)) {
+            echo "Folder created successfully.";
+        } else {
+            echo "Failed to create folder.";
+        }
+    }
+}
+
+// =========================  A C T I V A T E  E M P L O Y E E ========================= 
+if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST['employeeIdToActivate'])) {
+    $employeeIdToActivate = $_POST['employeeIdToActivate'];
+
+    $activate_employee_sql = "UPDATE employees SET is_active = 1 WHERE employee_id = ?";
+    $activate_employee_result = $conn->prepare($activate_employee_sql);
+    $activate_employee_result->bind_param("i", $employeeIdToActivate);
+
+    // Execute the prepared statement
+    if ($activate_employee_result->execute()) {
+        echo '<script>window.location.replace("' . $_SERVER['PHP_SELF'] . '?employee_id= ' . $employeeId . '");</script>';
+        exit();
+    } else {
+        $error_message = "Error: " . $activate_employee_result . "<br>" . $conn->error;
+    }
+}
+
+//  =========================  D E A C T I V A T E  E M P L O Y E E ========================= 
+if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST["employeeIdToDeactivate"])) {
+    $employeeIdToDeactivate = $_POST['employeeIdToDeactivate'];
+
+    $deactivate_employee_sql = "UPDATE employees SET is_active = 0 WHERE employee_id = ?";
+    $deactivate_employee_result = $conn->prepare($deactivate_employee_sql);
+    $deactivate_employee_result->bind_param("i", $employeeIdToDeactivate);
+
+    // Execute the prepared statement
+    if ($deactivate_employee_result->execute()) {
+        echo '<script>window.location.replace("' . $_SERVER['PHP_SELF'] . '?employee_id= ' . $employeeId . '");</script>';
+        exit();
+    } else {
+        $error_message = "Error: " . $deactivate_employee_result . "<br>" . $conn->error;
     }
 }
 ?>
@@ -232,7 +292,6 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
 
     <script>
         window.onload = function () {
-
             var chart = new CanvasJS.Chart("chartContainer", {
                 animationEnabled: true,
                 axisX: {
@@ -253,7 +312,6 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
                 }]
             });
             chart.render();
-
         }
     </script>
 
@@ -276,6 +334,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
                         $firstName = $row['first_name'];
                         $lastName = $row['last_name'];
                         $visaStatus = $row['visa'];
+                        $visaExpiryDate = $row['visa_expiry_date'];
                         $employeeId = $row['employee_id'];
                         $address = $row['address'];
                         $phoneNumber = $row['phone_number'];
@@ -290,6 +349,16 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
                         $department = $row['department'];
                         $position = $row['position'];
                         $email = $row['email'];
+                        $isActive = $row['is_active'];
+                        $bankBuildingSociety = $row['bank_building_society'];
+                        $bsb = $row['bsb'];
+                        $accountNumber = $row['account_number'];
+                        $superannuationFundName = $row['superannuation_fund_name'];
+                        $uniqueSuperannuatioIdentifier = $row['unique_superannuation_identifier'];
+                        $superannuationMemberNumber = $row['superannuation_member_number'];
+                        $taxFileNumber = $row['tax_file_number'];
+                        $higherEducationLoanProgramme = $row['higher_education_loan_programme'];
+                        $financialSupplementDebt = $row['financial_supplement_debt'];
                     }
                     ?>
                     <div class="row g-0">
@@ -313,11 +382,19 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
                                     </div>
                                 <?php } ?>
 
-
                                 <div class="d-flex flex-column ms-3">
-                                    <h5 class="card-title fw-bold text-start">
-                                        <?php echo (isset($firstName) && isset($lastName)) ? $firstName . " " . $lastName : "N/A"; ?>
-                                    </h5>
+                                    <div class="d-flex align-items-center justify-content-center">
+                                        <h5 class="card-title fw-bold text-start">
+                                            <?php echo (isset($firstName) && isset($lastName)) ? $firstName . " " . $lastName : "N/A"; ?>
+                                            <?php if ($isActive == 0) {
+                                                echo '<small> <span class="badge rounded-pill bg-danger mb-1">Inactive</span> </small>';
+                                            } else if ($isActive == 1) {
+                                                echo '<small> <span class="badge rounded-pill bg-success mb-1">Active</span> </small>';
+                                            }
+                                            ;
+                                            ?>
+                                        </h5>
+                                    </div>
                                     <small
                                         class="text-start"><?php echo (isset($position)) ? $position : "N/A" . " - " . ((isset($employeeId)) ? $employeeId : "N/A"); ?></small>
                                 </div>
@@ -352,6 +429,28 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
                                     <small>Visa Status</small>
                                     <h5 class="fw-bold"><?php echo isset($visaStatus) ? $visaStatus : "N/A"; ?>
                                     </h5>
+                                </div>
+                                <div class="col-lg-6 col-xl-3 d-flex flex-column">
+                                    <small>Visa Expiry Date</small>
+                                    <?php $today = new DateTime();
+                                    $expiryDate = new DateTime($visaExpiryDate);
+                                    $interval = $today->diff($expiryDate);
+                                    $daysDifference = $interval->format('%r%a');
+
+                                    $visaExpiryDate = isset($visaExpiryDate) ? $visaExpiryDate : "N/A";
+
+                                    // Check if the expiry date is less than 30 days from today
+                                    if ($daysDifference < 30 && $daysDifference >= 0) {
+                                        echo '<h5 class="fw-bold text-danger">' . $visaExpiryDate . '<i class="fa-solid fa-circle-exclamation fa-shake ms-1 tooltips" data-bs-toggle="tooltip" 
+                                        data-bs-placement="top" title="Visa expired in ' . $daysDifference . ' days "></i> </h5>';
+                                    } else if ($daysDifference < 0) {
+                                        echo '<h5 class="fw-bold text-danger">' . $visaExpiryDate . '<i class="fa-solid fa-circle-exclamation fa-shake ms-1 tooltips" data-bs-toggle="tooltip" 
+                                        data-bs-placement="top" title="Visa expired ' . abs($daysDifference) . ' days ago"></i> </h5>';
+                                    } else {
+                                        echo '<h5 class="fw-bold">' . $visaExpiryDate . '</h5>';
+                                    }
+                                    ?>
+
                                 </div>
                             </div>
                         </div>
@@ -392,7 +491,8 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
                                 </div>
                                 <div class="col-lg-6 col-xl-3 d-flex flex-column">
                                     <small>Emergency Contact Relationship</small>
-                                    <h5 class="fw-bold"><?php echo isset($emergencyContactRelationship) ? $emergencyContactRelationship : "N/A"; ?>
+                                    <h5 class="fw-bold">
+                                        <?php echo isset($emergencyContactRelationship) ? $emergencyContactRelationship : "N/A"; ?>
                                     </h5>
                                 </div>
                                 <div class="col-lg-6 col-xl-3 d-flex flex-column">
@@ -446,6 +546,61 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
                             </div>
                         </div>
                     </div>
+
+                    <div class="p-3 mt-4 bg-white rounded shadow-lg">
+                        <div class="p-3">
+                            <p class="fw-bold signature-color">Banking, Super and Tax Details</p>
+                            <div class="row">
+                                <div class="col-lg-6 col-xl-3 d-flex flex-column">
+                                    <small> Banking/Building Society </small>
+                                    <h5 class="fw-bold">
+                                        <?php echo isset($bankBuildingSociety) ? $bankBuildingSociety : "N/A" ?></h>
+                                </div>
+                                <div class="col-lg-6 col-xl-3 d-flex flex-column">
+                                    <small>BSB</small>
+                                    <h5 class="fw-bold"><?php echo isset($bsb) ? $bsb : "N/A" ?></h5>
+                                </div>
+                                <div class="col-lg-6 col-xl-3 d-flex flex-column">
+                                    <small>Account Number</small>
+                                    <h5 class="fw-bold"><?php echo isset($accountNumber) ? $accountNumber : "N/A" ?></h5>
+                                </div>
+                                <div class="col-lg-6 col-xl-3 d-flex flex-column">
+                                    <small>Unique Superannuation Identifier</small>
+                                    <h5 class="fw-bold">
+                                        <?php echo isset($uniqueSuperannuatioIdentifier) ? $uniqueSuperannuatioIdentifier : "N/A" ?>
+                                    </h5>
+                                </div>
+                                <div class="col-lg-6 col-xl-3 d-flex flex-column">
+                                    <small>Superannuation Fund Name</small>
+                                    <h5 class="fw-bold">
+                                        <?php echo isset($superannuationFundName) ? $superannuationFundName : "N/A" ?>
+                                    </h5>
+                                </div>
+                                <div class="col-lg-6 col-xl-3 d-flex flex-column">
+                                    <small>Superannuation Member Number</small>
+                                    <h5 class="fw-bold">
+                                        <?php echo isset($superannuationMemberNumber) ? $superannuationMemberNumber : "N/A" ?>
+                                    </h5>
+                                </div>
+                                <div class="col-lg-6 col-xl-3 d-flex flex-column">
+                                    <small>Tax File Number</small>
+                                    <h5 class="fw-bold"><?php echo isset($taxFileNumber) ? $taxFileNumber : "N/A" ?></h5>
+                                </div>
+                                <div class="col-lg-6 col-xl-3 d-flex flex-column">
+                                    <small>Higher Education Loan Programme</small>
+                                    <h5 class="fw-bold">
+                                        <?php echo isset($higherEducationLoanProgramme) ? ($higherEducationLoanProgramme == 1 ? "Yes" : "No") : "N/A"; ?>
+                                    </h5>
+                                </div>
+                                <div class="col-lg-6 col-xl-3 d-flex flex-column">
+                                    <small>Financial Supplement Debt</small>
+                                    <h5 class="fw-bold">
+                                        <?php echo isset($financialSupplementDebt) ? ($financialSupplementDebt == 1 ? "Yes" : "No") : "N/A" ?>
+                                    </h5>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
                 </div>
                 <div class="col-lg-4">
                     <div class="card bg-white border-0 rounded shadow-lg mt-4 mt-lg-0">
@@ -462,27 +617,140 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
                     </div>
                     <div class="card bg-white border-0 rounded shadow-lg mt-4">
                         <div class="p-3">
-                            <p class="fw-bold signature-color">Leave Allowance</p>
-                            <div class="px-4">
-                                <p></p>
+                            <p class="fw-bold signature-color">Files</p>
+                            <div class="d-flex justify-content-center">
+                                <div class="row col-12 p-2 background-color rounded shadow-sm">
+                                    <div class="col-auto d-flex align-items-center">
+                                        <i class="fa-solid fa-folder text-warning fa-xl"></i>
+                                    </div>
+                                    <div class="col">
+                                        <div class="d-flex align-items-center">
+                                            <div class="d-flex flex-column">
+                                                <span class="text-start fw-bold">Pay Review</span>
+                                                <span>
+                                                    <div class="d-flex align-items-center">
+                                                        <small id="pay-review-directory-path" class="me-1 text-break"
+                                                            style="color:#b1b1b1"><?php echo "/Users/jovinhampton/Documents/Employees/$employeeId/Pay%20Review" ?></small>
+                                                        <button id="copy-button" class="btn rounded btn-sm"
+                                                            onclick="copyDirectoryPath(this)"><i
+                                                                class="fa-regular fa-copy text-primary fa-xs p-0 m-0"></i>
+                                                            <small class="text-primary">Copy</small>
+                                                        </button>
+                                                    </div>
+                                                </span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="col-auto d-flex align-items-center justify-content-end">
+                                        <div class="dropdown">
+                                            <button class="btn " type="button" id="dropdownMenuButton"
+                                                data-bs-toggle="dropdown" aria-expanded="false">
+                                                <i class="fa-solid fa-ellipsis" role="button"></i>
+                                            </button>
+                                            <ul class="dropdown-menu" aria-labelledby="dropdownMenuButton">
+                                                <li><a class="dropdown-item" href="../">Quick Access From Browser</a>
+                                                </li>
+                                                <li><a class="dropdown-item" onclick="copyDirectoryPath(this)">Copy
+                                                        Folder</a></li>
+                                            </ul>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="d-flex justify-content-center mt-3">
+                                <div class="row col-12 p-2 background-color rounded shadow-sm">
+                                    <div class="col-auto d-flex align-items-center">
+                                        <i class="fa-solid fa-folder text-warning fa-xl"></i>
+                                    </div>
+                                    <div class="col">
+                                        <div class="d-flex align-items-center">
+                                            <div class="d-flex flex-column">
+                                                <span class="text-start fw-bold">Annual Leave</span>
+                                                <span>
+                                                    <div class="d-flex align-items-center">
+                                                        <small id="annual-leaves-directory-path" class="me-1 text-break"
+                                                            style="color:#b1b1b1"><?php echo "/Users/jovinhampton/Documents/Employees/$employeeId/Annual%20Leaves" ?></small>
+                                                        <button id="copy-button-annual" class="btn rounded btn-sm"
+                                                            onclick="copyDirectoryPath(this)"><i
+                                                                class="fa-regular fa-copy text-primary fa-xs p-0 m-0"></i>
+                                                            <small class="text-primary">Copy</small>
+                                                        </button>
+                                                    </div>
+                                                </span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="col-auto d-flex align-items-center justify-content-end">
+                                        <div class="dropdown">
+                                            <button class="btn " type="button" id="dropdownMenuButton"
+                                                data-bs-toggle="dropdown" aria-expanded="false">
+                                                <i class="fa-solid fa-ellipsis" role="button"></i>
+                                            </button>
+                                            <ul class="dropdown-menu" aria-labelledby="dropdownMenuButton">
+                                                <li><a class="dropdown-item" href="../../">Quick Access From Browser</a>
+                                                </li>
+                                                <li><a class="dropdown-item" onclick="copyDirectoryPath(this)">Copy
+                                                        Folder</a></li>
+                                            </ul>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="d-flex justify-content-center mt-3">
+                                <div class="row col-12 p-2 background-color rounded shadow-sm">
+                                    <div class="col-auto d-flex align-items-center">
+                                        <i class="fa-solid fa-folder text-warning fa-xl"></i>
+                                    </div>
+                                    <div class="col">
+                                        <div class="d-flex align-items-center">
+                                            <div class="d-flex flex-column">
+                                                <span class="text-start fw-bold">Policies</span>
+                                                <span>
+                                                    <div class="d-flex align-items-center">
+                                                        <small id="directory-path" class="me-1 text-break"
+                                                            style="color:#b1b1b1"><?php echo "/Users/jovinhampton/Documents/Employees/$employeeId/Policies" ?></small>
+                                                        <button id="copy-button-policies" class="btn rounded btn-sm"
+                                                            onclick="copyDirectoryPath(this)"><i
+                                                                class="fa-regular fa-copy text-primary fa-xs p-0 m-0"></i>
+                                                            <small class="text-primary">Copy</small>
+                                                        </button>
+                                                    </div>
+                                                </span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="col-auto d-flex align-items-center justify-content-end">
+                                        <div class="dropdown">
+                                            <button class="btn " type="button" id="dropdownMenuButton"
+                                                data-bs-toggle="dropdown" aria-expanded="false">
+                                                <i class="fa-solid fa-ellipsis" role="button"></i>
+                                            </button>
+                                            <ul class="dropdown-menu" aria-labelledby="dropdownMenuButton">
+                                                <li><a class="dropdown-item" href="../../">Quick Access From Browser</a>
+                                                </li>
+                                                <li><a class="dropdown-item" onclick="copyDirectoryPath(this)">Copy
+                                                        Folder</a></li>
+                                            </ul>
+                                        </div>
+                                    </div>
+                                </div>
                             </div>
                         </div>
                     </div>
-                    <div class="card bg-white border-0 rounded shadow-lg mt-4">
+                    <!-- <div class="card bg-white border-0 rounded shadow-lg mt-4">
                         <div class="p-3">
                             <div class="d-flex justify-content-between">
                                 <p class="fw-bold signature-color">Policies</p>
                                 <p type="button"><i class="fa-solid fa-plus signature-color" data-bs-toggle="modal"
                                         data-bs-target="#addPoliciesModal"></i></p>
                             </div>
-
-                            <a href="http://localhost/FUJI-Directories/CheckDirectory/Sample_Smoking_Policy.jpeg"> Smoking
-                                and Vaping Policy </a>
+                            <a href="http://localhost/FUJI-Directories/CheckDirectory/Sample_Smoking_Policy.jpeg">
+                                Smoking and Vaping Policy </a>
                         </div>
-                    </div>
+                    </div> -->
                     <div class="card bg-white border-0 rounded shadow-lg mt-4">
                         <div class="p-3">
-                            <p class="fw-bold signature-color"> Access</p>
+                            <p class="fw-bold signature-color">Access</p>
 
                             <?php
                             // Check if there are any results
@@ -531,14 +799,14 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
                             ?>
                         </div>
                     </div>
-
                     <!-- ================== Pay History Modal ================== -->
                     <div class="modal fade" id="payRaiseHistoryModal" tabindex="-2"
                         aria-labelledby="payRaiseHistoryModalLabel" aria-hidden="true">
                         <div class="modal-dialog modal-xl">
                             <div class="modal-content">
                                 <div class="modal-header">
-                                    <h5 class="modal-title fw-bold" id="payRaiseHistoryModalLabel">Pay Raise History</h5>
+                                    <h5 class="modal-title fw-bold" id="payRaiseHistoryModalLabel">Pay Raise History
+                                    </h5>
                                     <button type="button" class="btn-close" data-bs-dismiss="modal"
                                         aria-label="Close"></button>
                                 </div>
@@ -647,7 +915,8 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
                                 </div>
                                 <div class="modal-body">
                                     <!-- Delete form -->
-                                    Are you sure you want to delete the wage record for <b> <span id="wageDate"></span> </b>
+                                    Are you sure you want to delete the wage record for <b> <span id="wageDate"></span>
+                                    </b>
                                     with an amount of <b> $<span id="wageAmount"></b></span>?
                                 </div>
                                 <div class="modal-footer">
@@ -674,7 +943,15 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
                                 <div class="px-5">
                                     <!-- ================== Edit Profile Form ================== -->
                                     <div>
-                                        <p class=" signature-color fw-bold mt-5"> Personal Details</p>
+                                        <div class="d-flex justify-content-between align-items-center">
+                                            <p class="signature-color fw-bold mt-5"> Personal Details </p>
+                                            <?php if ($isActive == 0) {
+                                                echo '<form method="POST"> <input type="hidden" name="employeeIdToActivate" value="' . $employeeId . '"/> <button class="btn btn-sm btn-success mt-4">Activate Employee</button></form>';
+                                            } else if ($isActive == 1) {
+                                                echo '<form method="POST"> <input type="hidden" name="employeeIdToDeactivate" value="' . $employeeId . '"/><button class="btn btn-sm btn-danger mt-4">Deactivate Employee</button></form>';
+                                            }
+                                            ?>
+                                        </div>
                                         <div class="row">
                                             <div class="form-group col-md-12 d-flex align-items-center mb-4">
                                                 <div class="col-md-2 d-flex justify-content-center align-items-center">
@@ -710,9 +987,11 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
                                                                 <input type="file" id="profileImageToEdit"
                                                                     name="profileImageToEdit" class="form-control required">
                                                                 <button type="submit" class="btn btn-sm btn-danger mt-2"
-                                                                    name="deleteProfileImage">Delete Profile Image</button>
+                                                                    name="deleteProfileImage">Delete Profile
+                                                                    Image</button>
                                                                 <button type="submit" class="btn btn-sm btn-dark mt-2"
-                                                                    name="changeProfileImage">Change Profile Image</button>
+                                                                    name="changeProfileImage">Change Profile
+                                                                    Image</button>
                                                             </form>
                                                         </div>
                                                     </div>
@@ -804,7 +1083,8 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
                                                     <div class="form-group col-md-6">
                                                         <label for="emergencyContactRelationship" class="fw-bold">Emergency
                                                             Contact Relationship</label>
-                                                        <input type="text" class="form-control" id="emergencyContactRelationship"
+                                                        <input type="text" class="form-control"
+                                                            id="emergencyContactRelationship"
                                                             name="emergencyContactRelationship"
                                                             value="<?php echo (isset($emergencyContactRelationship) && $emergencyContactRelationship !== "" ? $emergencyContactRelationship : "") ?>">
                                                     </div>
@@ -860,7 +1140,8 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
                                                                 echo "selected"; ?>>Sheet Metal
                                                             </option>
                                                             <option value="Office" <?php if (isset($department) && $department == "Office")
-                                                                echo "selected"; ?>>Office</option>
+                                                                echo "selected"; ?>>Office
+                                                            </option>
                                                         </select>
                                                     </div>
                                                     <div class="form-group col-md-5 mt-3">
@@ -887,32 +1168,36 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
                                 </div>
                             </div>
                         </div>
-                        <!-- ================== Add Policies Modal ================== -->
-                        <div class="modal fade" id="addPoliciesModal" tabindex="-1" aria-labelledby="addPoliciesModalLabel"
-                            aria-hidden="true">
-                            <div class="modal-dialog modal-lg">
-                                <div class="modal-content">
-                                    <div class="modal-header">
-                                        <h5 class="modal-title" id="addPoliciesModalLabel">Add Policies Document</h5>
-                                        <button type="button" class="btn-close" data-bs-dismiss="modal"
-                                            aria-label="Close"></button>
+                    </div>
+                    <!-- ================== Add Policies Modal ================== -->
+                    <div class="modal fade" id="addPoliciesModal" tabindex="-1" aria-labelledby="addPoliciesModalLabel"
+                        aria-hidden="true">
+                        <div class="modal-dialog modal-lg">
+                            <div class="modal-content">
+                                <div class="modal-header">
+                                    <h5 class="modal-title" id="addPoliciesModalLabel">Add Policies Document</h5>
+                                    <button type="button" class="btn-close" data-bs-dismiss="modal"
+                                        aria-label="Close"></button>
+                                </div>
+                                <div class="modal-body">
+
+                                    <!-- Drag and Drop area -->
+                                    <div class="border border-dashed p-4 text-center" id="dropZone">
+                                        <p class="mb-0">Drag & Drop your documents here or <br>
+                                            <button class="btn btn-primary btn-sm mt-2"
+                                                onclick="document.getElementById('fileInput').click()">Browse
+                                                Files</button>
+                                        </p>
                                     </div>
-                                    <div class="modal-body">
-                                        <!-- Drag and Drop area -->
-                                        <div class="border border-dashed p-4 text-center" id="dropZone">
-                                            <p class="mb-0">Drag & Drop your documents here or <br>
-                                                <button class="btn btn-primary btn-sm mt-2"
-                                                    onclick="document.getElementById('fileInput').click()">Browse
-                                                    Files</button>
-                                            </p>
-                                            <input type="file" id="fileInput" class="d-none" multiple />
-                                        </div>
+                                    <form method="POST">
+                                        <input type="file" id="fileInput" name="policiesToSubmit" class="d-none" multiple />
+
                                         <!-- Display uploaded file names -->
                                         <div id="fileList" class="mt-3"></div>
                                         <div class="d-flex justify-content-center">
-                                            <button class="btn btn-dark btn-sm"> Add Documents</button>
+                                            <button type="submit" class="btn btn-dark btn-sm"> Add Documents</button>
                                         </div>
-                                    </div>
+                                    </form>
                                 </div>
                             </div>
                         </div>
@@ -1058,6 +1343,55 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
                 });
             });
         });
+    </script>
+
+    <script>
+        function copyDirectoryPath(button) {
+            var directoryPathElement = button.parentElement.querySelector('small.text-break');
+            var textArea = document.createElement("textarea");
+
+            // Place the directory path text inside the textarea
+            textArea.textContent = directoryPathElement.textContent;
+
+            // Ensure textarea is non-visible
+            textArea.style.position = "fixed";
+            textArea.style.opacity = 0;
+
+            // Append the textarea to the document
+            document.body.appendChild(textArea);
+
+            // Select the text inside the textarea
+            textArea.select();
+
+            try {
+                // Execute the copy command
+                document.execCommand('copy');
+                console.log('Text copied successfully');
+
+                // Change button text to "Copied"
+                button.innerHTML = '<i class="fa-regular fa-check-circle text-success fa-xs"></i> <small class="text-success">Copied</small>';
+
+                // Reset button text after 2 seconds
+                setTimeout(function () {
+                    button.innerHTML = '<i class="fa-regular fa-copy text-primary fa-xs"></i> <small class="text-primary">Copy</small>';
+                }, 2000); // 2000 milliseconds = 2 seconds
+
+            } catch (err) {
+                console.error('Unable to copy text', err);
+            }
+
+            // Remove the textarea from the document
+            document.body.removeChild(textArea);
+        }
+
+    </script>
+
+    <script>
+        // Enabling the tooltip
+        const tooltips = document.querySelectorAll('.tooltips');
+        tooltips.forEach(t => {
+            new bootstrap.Tooltip(t);
+        })
     </script>
 </body>
 

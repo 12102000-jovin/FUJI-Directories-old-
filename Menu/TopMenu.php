@@ -25,6 +25,7 @@ if ($user_details_result && $user_details_result->num_rows > 0) {
     $firstName = $row['first_name'];
     $lastName = $row['last_name'];
     $employeeId = $row['employee_id'];
+    $profileImage = $row['profile_image'];
 } else { // Set default values if the user is not found
     $firstName = 'N/A';
     $lastName = 'N/A';

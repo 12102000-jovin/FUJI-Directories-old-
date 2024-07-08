@@ -40,7 +40,6 @@ $folders_result = $conn->query($folders_sql);
         <?php if ($folders_result->num_rows > 0): ?>
             <div class="row row-cols-1 row-cols-sm-2 row-cols-md-3 row-cols-lg-4 g-4">
                 <?php while ($row = $folders_result->fetch_assoc()): ?>
-
                     <?php
                     $initials = '';
                     $words = explode(' ', $row['folder_name']); // Split the folder name into words

@@ -1,6 +1,5 @@
 <?php
 $employee_id = $_SESSION['employee_id'];
-// echo $employee_id;
 
 // SQL Query to get the folders
 $folders_sql = "SELECT DISTINCT f.*
@@ -105,7 +104,6 @@ $folders_result = $conn->query($folders_sql);
             echo '<li class="mx-2 py-2 p-1 rounded fw-bold larger-font">No folders found</li>';
         }
         ?>
-        <li class="mx-2 py-2 p-1 rounded fw-bold larger-font">Etc.</li>
     </ul>
 </div>
 
@@ -177,7 +175,6 @@ $folders_result = $conn->query($folders_sql);
         updateMenuItems(false); // Pass false to display initials initially
     });
 </script>
-
 
 <!-- Bootstrap Bundle with Popper -->
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>

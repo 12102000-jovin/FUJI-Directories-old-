@@ -4,6 +4,7 @@ ini_set('display_startup_errors', '1');
 error_reporting(E_ALL);
 
 $employee_id = $_SESSION['employee_id'];
+$role = $_SESSION['role'];
 
 // SQL Query to get the folders
 $folders_sql = "SELECT DISTINCT f.*

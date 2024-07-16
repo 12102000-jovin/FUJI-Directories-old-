@@ -117,7 +117,149 @@ $employmentTypeData = array(
     array("label" => "Casual", "symbol" => "Casual", "y" => $casual_percentage, "color" => "#2980b9"),
 );
 
-?>
+// =============================== S E C T I O N  C H A R T  ( E L E C T R I C A L )===============================
+
+// Query to get the total number of electrical employees
+$total_electrical_employees_sql = "SELECT COUNT(*) AS total_electrical_employees_count FROM employees WHERE department = 'Electrical'";
+$total_electrical_employees_result = $conn->query($total_electrical_employees_sql);
+
+// Query to get the number of panel section employees
+$panel_section_employees_sql = "SELECT COUNT(*) AS panel_section_count FROM employees WHERE department = 'Electrical' AND section='Panel'";
+$panel_section_employees_result = $conn->query($panel_section_employees_sql);
+
+// Query to get the number of roof employees
+$roof_section_employees_sql = "SELECT COUNT(*) AS roof_section_count FROM employees WHERE department = 'Electrical' AND section='Roof'";
+$roof_section_employees_result = $conn->query($roof_section_employees_sql);
+
+// Initialize variables to electrical department section counts
+$total_electrical_employees_count = 0;
+$panel_section_count = 0;
+$roof_section_count = 0;
+
+// Fetch total number of electrical employees
+if ($total_electrical_employees_result) {
+    $row = $total_electrical_employees_result->fetch_assoc();
+    $total_electrical_employees_count = $row['total_electrical_employees_count'];
+}
+
+// Fetch number of panel employees
+if ($panel_section_employees_result) {
+    $row = $panel_section_employees_result->fetch_assoc();
+    $panel_section_count = $row["panel_section_count"];
+}
+
+// Fetch number of roof employees
+if ($roof_section_employees_result) {
+    $row = $roof_section_employees_result->fetch_assoc();
+    $roof_section_count = $row["roof_section_count"];
+}
+
+// Calculate percentages for each section
+$panel_percentage = ($panel_section_count / $total_electrical_employees_count) * 100;
+$roof_percentage = ($roof_section_count / $total_electrical_employees_count) * 100;
+
+// echo $total_electrical_employees_count;
+
+// Create Electrical Section Data array with percentages for each section
+$electricalSectionData = array(
+    array("label" => "Panel", "symbol" => "Panel", "y" => $panel_percentage, "color" => "#5bc0de"),
+    array("label" => "Roof", "symbol" => "Roof", "y" => $roof_percentage, "color" => "#2980b9"),
+);
+
+// =============================== S E C T I O N  C H A R T  ( S H E E T  M E T A L ) ===============================
+
+// Query to get the total of sheet metal employees
+$total_sheet_metal_employees_sql = "SELECT COUNT(*) total_sheet_metal_employees_count FROM employees WHERE department = 'Sheet Metal'";
+$total_sheet_metal_employees_result = $conn->query($total_sheet_metal_employees_sql);
+
+// Query to get the number of programmer section employees
+$programmer_section_employees_sql = "SELECT COUNT(*) AS programmer_section_count FROM employees WHERE department = 'Sheet Metal' AND section='Programmer'";
+$programmer_section_employees_result = $conn->query($programmer_section_employees_sql);
+
+// Query to get the total of painter section employees
+$painter_section_employees_sql = "SELECT COUNT(*) AS painter_section_count FROM employees WHERE department = 'Sheet Metal' AND section='Painter'";
+$painter_section_employees_result = $conn->query($painter_section_employees_sql);
+
+// Initialise variables to sheet metal department section counts
+$total_sheet_metal_employees_count = 0;
+$programmer_section_count = 0;
+$painter_section_count = 0;
+
+// Fetch total number of sheet metal employees
+if ($total_sheet_metal_employees_result) {
+    $row = $total_sheet_metal_employees_result->fetch_assoc();
+    $total_sheet_metal_employees_count = $row["total_sheet_metal_employees_count"];
+}
+
+// Fetch number of programmer employees
+if ($programmer_section_employees_result) {
+    $row = $programmer_section_employees_result->fetch_assoc();
+    $programmer_section_count = $row["programmer_section_count"];
+}
+
+// Fetch number of painter employees
+if ($painter_section_employees_result) {
+    $row = $painter_section_employees_result->fetch_assoc();
+    $painter_section_count = $row["painter_section_count"];
+}
+
+// Calculate percentages for each section
+$programmer_percentage = ($programmer_section_count / $total_sheet_metal_employees_count) * 100;
+$painter_percentage = ($painter_section_count / $total_sheet_metal_employees_count) * 100;
+
+// Create Sheet Metal Section Data array with percentages for each section
+$sheetMetalSectionData = array(
+    array("label" => "Programmer", "symbol" => "Programmer", "y" => $programmer_percentage, "color" => "#5bc0de"),
+    array("label" => "Painter", "symbol" => "Painter", "y" => $painter_percentage, "color" => "#2980b9"),
+);
+
+// =============================== S E C T I O N  C H A R T  ( O F F I C E ) ===============================
+
+// Query to get the total of office employees
+$total_office_employees_sql = "SELECT COUNT(*) total_office_employees_count FROM employees WHERE department = 'Office'";
+$total_office_employees_result = $conn->query($total_office_employees_sql);
+
+// Query to get the number of engineer section employees
+$engineer_section_employees_sql = "SELECT COUNT(*) AS engineer_section_count FROM employees WHERE department = 'Office' AND section='Engineer'";
+$engineer_section_employees_result = $conn->query($engineer_section_employees_sql);
+
+// Query to get the number of accountant section employees
+$accountant_section_employees_sql = "SELECT COUNT(*) AS accountant_section_count FROM employees WHERE department = 'Office' AND section='Accountant'";
+$accountant_section_employees_result = $conn->query($accountant_section_employees_sql);
+
+// Initialise variables to office department section
+$total_office_employees_count = 0;
+$engineer_section_count = 0;
+$accountant_section_count = 0;
+
+// Fetch total number of office employees
+if ($total_office_employees_result) {
+    $row = $total_office_employees_result->fetch_assoc();
+    $total_office_employees_count = $row["total_office_employees_count"];
+}
+
+// Fetch number of engineer employees
+if ($engineer_section_employees_result) {
+    $row = $engineer_section_employees_result->fetch_assoc();
+    $engineer_section_count = $row["engineer_section_count"];
+}
+
+// Fetch number of accountant employees
+if ($accountant_section_employees_result) {
+    $row = $accountant_section_employees_result->fetch_assoc();
+    $accountant_section_count = $row["accountant_section_count"];
+}
+
+// Calculate percentages for each section
+$engineer_percentage = ($engineer_section_count / $total_office_employees_count) * 100;
+$accountant_percentage = ($accountant_section_count / $total_office_employees_count) * 100;
+
+// Create Office section data array with percentages for each section
+$officeSectionData = array(
+    array("label" => "Engineer", "symbol" => "Engineer", "y" => $engineer_percentage, "color" => "#5bc0de"),
+    array("label" => "Accountant", "symbol" => "Accountant", "y" => $accountant_percentage, "color" => "#2980b9"),
+)
+    ?>
 
 <!DOCTYPE html>
 <html lang="en">
@@ -189,7 +331,7 @@ $employmentTypeData = array(
     <div class="tab-content" id="myTabContent">
         <div class="tab-pane fade show active" id="active" role="tabpanel" aria-labelledby="active-tab">
             <div class="row">
-                <div class="col-md-4">
+                <div class="col-lg-4">
                     <div class="bg-white p-2 mt-5 rounded-3">
                         <h4 class="p-2 pb-0 fw-bold mb-0 signature-color dropdown-toggle" data-toggle="collapse"
                             data-target="#departmentCollapse" aria-expanded="false" aria-controls="departmentCollapse"
@@ -225,7 +367,7 @@ $employmentTypeData = array(
                         <div class="" id="chartContainer" style="height: 370px;"></div>
                     </div>
                 </div>
-                <div class="col-md-4">
+                <div class="col-lg-4">
                     <div class="bg-white p-2 mt-5 rounded-3">
                         <h4 class="p-2 pb-0 fw-bold mb-0 signature-color dropdown-toggle" data-toggle="collapse"
                             data-target="#employmentTypeCollapse" aria-expanded="false"
@@ -260,7 +402,105 @@ $employmentTypeData = array(
                         </div>
                         <div id="chartContainer2" style="height: 370px;"></div>
                     </div>
-
+                </div>
+            </div>
+            <h1 class="mt-4 fw-bold">Section</h1>
+            <div class="row">
+                <div class="col-lg-4">
+                    <div class="bg-white p-2 mt-3 rounded-3">
+                        <h4 class="p-2 pb-0 fw-bold mb-0 signature-color dropdown-toggle" data-toggle="collapse"
+                            data-target="#electricalDepartmentCollapse" aria-expanded="false"
+                            aria-controls="electricalDepartmentCollapse" style="cursor: pointer;">
+                            Electrical Department
+                        </h4>
+                        <div class="collapse" id="electricalDepartmentCollapse">
+                            <div class="card card-body border-0 pb-0 pt-2">
+                                <table class="table">
+                                    <tbody class="pe-none">
+                                        <tr>
+                                            <td>Panel</td>
+                                            <td><?php echo $panel_section_count ?></td>
+                                        </tr>
+                                        <tr>
+                                            <td>Roof</td>
+                                            <td><?php echo $roof_section_count ?></td>
+                                        </tr>
+                                        <tr>
+                                            <td class="fw-bold" style="color:#043f9d">Total Employees</td>
+                                            <td class="fw-bold" style="color:#043f9d">
+                                                <?php echo $total_electrical_employees_count ?>
+                                            </td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                        <div id="chartContainer3" style="height: 370px;"></div>
+                    </div>
+                </div>
+                <div class="col-lg-4">
+                    <div class="bg-white p-2 mt-3 rounded-3">
+                        <h4 class="p-2 pb-0 fw-bold mb-0 signature-color dropdown-toggle" data-toggle="collapse"
+                            data-target="#sheetMetalDepartmentCollapse" aria-expanded="false"
+                            aria-controls="sheetMetalDepartmentCollapse" style="cursor: pointer;">
+                            Sheet Metal Department
+                        </h4>
+                        <div class="collapse" id="sheetMetalDepartmentCollapse">
+                            <div class="card card-body border-0 pb-0 pt-2">
+                                <table class="table">
+                                    <tbody class="pe-none">
+                                        <tr>
+                                            <td>Painter</td>
+                                            <td><?php echo $painter_section_count ?> </td>
+                                        </tr>
+                                        <tr>
+                                            <td>Programmer</td>
+                                            <td><?php echo $programmer_section_count ?></td>
+                                        </tr>
+                                        <tr>
+                                            <td class="fw-bold" style="color:#043f9d">Total Employees</td>
+                                            <td class="fw-bold" style="color:#043f9d">
+                                                <?php echo $total_sheet_metal_employees_count ?>
+                                            </td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                        <div id="chartContainer4" style="height: 370px;"></div>
+                    </div>
+                </div>
+                <div class="col-lg-4">
+                    <div class="bg-white p-2 mt-3 rounded-3">
+                        <h4 class="p-2 pb-0 fw-bold mb-0 signature-color dropdown-toggle" data-toggle="collapse"
+                            data-target="#officeDepartmentCollapse" aria-expanded="false"
+                            aria-controls="officeDepartmentCollapse" style="cursor: pointer;">
+                            Office Department
+                        </h4>
+                        <div class="collapse" id="officeDepartmentCollapse">
+                            <div class="card card-body border-0 pb-0 pt-2">
+                                <table class="table">
+                                    <tbody class="pe-none">
+                                        <tr>
+                                            <td>Engineer</td>
+                                            <td><?php echo $engineer_section_count ?></td>
+                                        </tr>
+                                        <tr>
+                                            <td>Accountant</td>
+                                            <td><?php echo $accountant_section_count ?></td>
+                                        </tr>
+                                        <tr>
+                                            <td class="fw-bold" style="color:#043f9d">Total Employees</td>
+                                            <td class="fw-bold" style="color:#043f9d">
+                                                <?php echo $total_office_employees_count ?>
+                                            </td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                        <div id="chartContainer5" style="height: 370px;"></div>
+                    </div>
                 </div>
             </div>
         </div>
@@ -313,8 +553,54 @@ $employmentTypeData = array(
                 }]
             });
 
+            var chart3 = new CanvasJS.Chart("chartContainer3", {
+                theme: "light2",
+                animationEnabled: true,
+                title: {
+                    // text: "Total Employees: <?php echo $total_employees_count ?>",
+                    fontSize: 18,
+                },
+                data: [{
+                    type: "pie",
+                    indexLabel: "{symbol} - {y}",
+                    yValueFormatString: "#,##0.0\"%\"",
+                    showInLegend: true,
+                    legendText: "{label} : {y}",
+                    dataPoints: <?php echo json_encode($electricalSectionData, JSON_NUMERIC_CHECK); ?>,
+                }]
+            });
+
+            var chart4 = new CanvasJS.Chart("chartContainer4", {
+                theme: "light2",
+                animationEnabled: true,
+                data: [{
+                    type: "pie",
+                    indexLabel: "{symbol} - {y}",
+                    yValueFormatString: "#,##0.0\"%\"",
+                    showInLegend: true,
+                    legendText: "{label} : {y}",
+                    dataPoints: <?php echo json_encode($sheetMetalSectionData, JSON_NUMERIC_CHECK); ?>
+                }]
+            })
+
+            var chart5 = new CanvasJS.Chart("chartContainer5", {
+                theme: "light2",
+                animationEnabled: true,
+                data: [{
+                    type: "pie",
+                    indexLabel: "{symbol} = {y}",
+                    yValueFormatString: "#,##0.0\"%\"",
+                    showInLegend: true,
+                    legendText: "{label} : {y}",
+                    dataPoints: <?php echo json_encode($officeSectionData, JSON_NUMERIC_CHECK); ?>
+                }]
+            })
+
             chart.render();
             chart2.render();
+            chart3.render();
+            chart4.render();
+            chart5.render();
         }
     </script>
 </body>

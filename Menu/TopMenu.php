@@ -3,6 +3,7 @@
 require("db_connect.php");
 
 $employee_id = $_SESSION['employee_id'];
+$role= $_SESSION['role'];
 
 // Retrieve the username from the session
 $username = $_SESSION['username'] ?? '';
@@ -89,7 +90,9 @@ if (isset($_GET['menu'])) {
                     </a>
                     <ul class="dropdown-menu" aria-labelledby="dropdownMenuLink">
                         <li><a class="dropdown-item" href="Pages/ProfilePage.php?employee_id=<?php echo $employee_id ?>">Profile</a></li>
-                        <li><a class="dropdown-item" href="?page=manageUsers">Manage User Access</a></li>
+                        <?php if ($role === "admin") { ?>
+                            <li><a class="dropdown-item" href="?page=manageUsers">Manage User Access</a></li>
+                        <?php } ?>
                         <li><a class="dropdown-item text-danger" href="#" data-bs-toggle="modal" data-bs-target="#logoutModal">Logout</a></li>
                     </ul>
                 </div>

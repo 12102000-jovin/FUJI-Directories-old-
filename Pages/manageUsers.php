@@ -10,7 +10,7 @@ require_once ("db_connect.php");
 $employeeId = $_SESSION['employee_id'];
 
 // SQL Query to retrieve users details
-$user_details_sql = "SELECT e.*, u.username, u.password
+$user_details_sql = "SELECT e.*, u.username, u.password, u.role
                      FROM employees e
                      JOIN users u ON e.employee_id = u.employee_id";
 $user_details_result = $conn->query($user_details_sql);
@@ -25,10 +25,12 @@ $employees_result = $conn->query($employees_sql);
 
 $error_message = ""; // Initialize error message variable
 
+// SQL Query to add user
 if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST['username'])) {
     $employeeId = $_POST["employeeId"];
     $username = $_POST['username'];
     $password = $_POST['password'];
+    $role = $_POST['role'];
 
     // Check if the username already exists in the users table
     $check_existing_username_sql = "SELECT COUNT(*) AS count FROM users WHERE username = ?";
@@ -51,9 +53,9 @@ if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST['username'])) {
             $error_message = "Error: User with employee ID $employeeId already exists.";
         } else {
             // Proceed with inserting the new user
-            $add_user_sql = "INSERT INTO users (employee_id, username, password) VALUES (?,?,?)";
+            $add_user_sql = "INSERT INTO users (employee_id, username, password, role) VALUES (?,?,?,?)";
             $add_user_result = $conn->prepare($add_user_sql);
-            $add_user_result->bind_param("sss", $employeeId, $username, $password);
+            $add_user_result->bind_param("ssss", $employeeId, $username, $password, $role);
 
             // Execute the prepared statement 
             if ($add_user_result->execute()) {
@@ -70,12 +72,14 @@ if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST['username'])) {
 // SQL Query to edit user
 if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST['employeeIdToEdit'])) {
     $employeeIdToEdit = $_POST['employeeIdToEdit'];
-    $editUsename = $_POST['editUsername'];
+    $editUsername = $_POST['editUsername'];
     $editPassword = $_POST['editPassword'];
+    $editRole = $_POST['editRole'];
 
-    $edit_user_sql = "UPDATE users SET username = ?, password = ? WHERE employee_id = ?";
+
+    $edit_user_sql = "UPDATE users SET username = ?, password = ?, role = ? WHERE employee_id = ?";
     $edit_user_result = $conn->prepare($edit_user_sql);
-    $edit_user_result->bind_param("ssi", $editUsename, $editPassword, $employeeIdToEdit);
+    $edit_user_result->bind_param("sssi", $editUsername, $editPassword, $editRole, $employeeIdToEdit);
 
     // Execute prepared statement
     if ($edit_user_result->execute()) {
@@ -231,8 +235,10 @@ if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST['employeeIdToDelete'])
                                             style="background-color: #043f9d" data-employee-id="<?= $row['employee_id'] ?>"
                                             data-username="<?= $row['username'] ?>" data-password="<?= $row['password'] ?>"
                                             data-first-name="<?= $row['first_name'] ?>"
-                                            data-last-name="<?= $row['last_name'] ?>"> <small>Edit</small> <i
-                                                class="fa-regular fa-pen-to-square fa-sm mx-1"></i></button>
+                                            data-last-name="<?= $row['last_name'] ?>" data-role="<?= $row['role'] ?>">
+                                            <small>Edit</small> <i class="fa-regular fa-pen-to-square fa-sm mx-1"></i>
+                                        </button>
+
                                     </div>
                                     <div class="col-md-4 mb-2 m-1">
                                         <button class="btn btn-danger w-100 deleteUserBtn"
@@ -262,13 +268,15 @@ if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST['employeeIdToDelete'])
                                         <td class="py-4 align-middle"><?= $row['employee_id'] ?></td>
                                         <td class="py-4 align-middle">
                                             <button class="btn text-warning" type="button" data-bs-toggle="modal"
-                                                data-bs-target="#showAccessModal<?= $row['employee_id'] ?>" >
-                                                <i class="fa-solid fa-key tooltips" data-bs-toggle="tooltip" data-bs-placement="top" title="User's Access"></i>
+                                                data-bs-target="#showAccessModal<?= $row['employee_id'] ?>">
+                                                <i class="fa-solid fa-key tooltips" data-bs-toggle="tooltip"
+                                                    data-bs-placement="top" title="User's Access"></i>
                                             </button>
                                             <button class="btn">
                                                 <a href="Pages/ProfilePage.php?employee_id=<?= $row['employee_id'] ?>"
-                                                    target="_blank" class="tooltips" data-bs-toggle="tooltip" data-bs-placement="top" title="View Profile"><i
-                                                        class="fa-solid fa-up-right-from-square fa-sm m-1 text-dark" ></i></a>
+                                                    target="_blank" class="tooltips" data-bs-toggle="tooltip"
+                                                    data-bs-placement="top" title="View Profile"><i
+                                                        class="fa-solid fa-up-right-from-square fa-sm m-1 text-dark"></i></a>
                                             </button>
                                             <button class="btn editUserModalBtn" data-bs-toggle="modal"
                                                 data-bs-target="#editUserModal"
@@ -276,14 +284,19 @@ if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST['employeeIdToDelete'])
                                                 data-username="<?= $row['username'] ?>"
                                                 data-password="<?= $row['password'] ?>"
                                                 data-first-name="<?= $row['first_name'] ?>"
-                                                data-last-name="<?= $row['last_name'] ?>">
-                                                <i class="fa-regular fa-pen-to-square signature-color m-1 tooltips" data-bs-toggle="tooltip" data-bs-placement="top" title="Edit User"></i>
+                                                data-last-name="<?= $row['last_name'] ?>"
+                                                data-role="<?= $row['role'] ?>">
+                                                <i class="fa-regular fa-pen-to-square signature-color m-1 tooltips"
+                                                    data-bs-toggle="tooltip" data-bs-placement="top" title="Edit User"></i>
                                             </button>
                                             <button class="deleteUserBtn btn" data-bs-toggle="modal"
                                                 data-bs-target="#deleteConfirmationModal"
                                                 data-employee-id="<?= $row['employee_id'] ?>">
-                                                <i class="fa-solid fa-trash-can text-danger m-1 tooltips" data-bs-toggle="tooltip" data-bs-placement="top" title="Delete User"></i>
+                                                <i class="fa-solid fa-trash-can text-danger m-1 tooltips"
+                                                    data-bs-toggle="tooltip" data-bs-placement="top"
+                                                    title="Delete User"></i>
                                             </button>
+                                            
                                         </td>
                                     </tr>
                                 <?php endwhile; ?>
@@ -429,7 +442,7 @@ if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST['employeeIdToDelete'])
                 <form method="POST">
                     <div class="modal-body">
                         <div class="row">
-                            <div class="form-group col-md-12">
+                            <div class="form-group col-md-6">
                                 <label for="employeeId" class="fw-bold">Employee Id</label>
                                 <select name="employeeId" aria-label="employeeId" class="form-select" id="employeeId">
                                     <?php
@@ -438,6 +451,14 @@ if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST['employeeIdToDelete'])
                                         echo '<option value="' . $row['employee_id'] . '">' . $row['first_name'] . ' ' . $row['last_name'] . ' (' . $row['employee_id'] . ')</option>';
                                     }
                                     ?>
+                                </select>
+                            </div>
+                            <div class="form-group col-md-6">
+                                <label for="role" class="fw-bold">Role</label>
+                                <select name="role" aria-label="role" class="form-select" id="role">
+                                    <option disabled selected hidden> Select Role </option>
+                                    <option value="general"> General</option>
+                                    <option value="admin"> Admin</option>
                                 </select>
                             </div>
                             <div class="form-group col-md-6 mt-3">
@@ -486,6 +507,14 @@ if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST['employeeIdToDelete'])
                         <div class="form-group mt-4">
                             <label for="editPassword" class="fw-bold">Password</label>
                             <input id="editPassword" name="editPassword" class="form-control" />
+                        </div>
+                        <div class="form-group mt-4">
+                            <label for="editRole" class="fw-bold">Role</label>
+                            <select class="form-select" aria-label="editRole" name="editRole" id="editRole">
+                                <option disabled selected hidden>Select Role</option>
+                                <option value="general">General</option>
+                                <option value="admin">Admin</option>
+                            </select>
                         </div>
 
                     </div>
@@ -561,6 +590,7 @@ if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST['employeeIdToDelete'])
                     var password = button.getAttribute('data-password');
                     var firstName = button.getAttribute('data-first-name');
                     var lastName = button.getAttribute('data-last-name');
+                    var role = button.getAttribute('data-role');
 
                     // Set the text content of the span in the edit user modal
                     document.querySelector('#editUserModal #editFirstName').textContent = firstName;
@@ -580,6 +610,9 @@ if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST['employeeIdToDelete'])
                     // Prepopulate the user username
                     document.querySelector('#editUserModal #editPassword').value = password;
 
+                    console.log(role);
+
+                    document.getElementById('editRole').value = role;
                     // Show the modal
                     editUserModal.show();
                 });

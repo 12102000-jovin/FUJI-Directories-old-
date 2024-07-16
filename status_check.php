@@ -3,7 +3,7 @@ session_start();
 
 // Check if the user is not logged in, then redirect to the login page
 if (!isset($_SESSION['logged_in']) || $_SESSION['logged_in'] !== true) {
-    header("Location: login.php");
+    header("Location: http://localhost/FUJI-Directories/Login.php");
     exit();
 }
 
@@ -11,7 +11,7 @@ if (!isset($_SESSION['logged_in']) || $_SESSION['logged_in'] !== true) {
 if (isset($_GET['logout']) && ($_GET['logout']) === 'true') {
     // Terminate all the session
     session_destroy();
-    header("Location: login.php");
+    header("Location: http://localhost/FUJI-Directories/Login.php");
     exit();
 }
 
@@ -36,7 +36,7 @@ if (isset($_SESSION['username']) && isset($_SESSION['logged_in'])) {
 
             // Redirect back to the form page with an error message
             $error_message = "Your session has expired please login again.";
-            header("Location: login.php?error=" . urlencode($error_message));
+            header("Location: http://localhost/FUJI-Directories/Login.php?error=" . urlencode($error_message));
             exit();
         }
     }

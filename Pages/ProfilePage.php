@@ -5,11 +5,28 @@ error_reporting(E_ALL);
 
 // Connect to the database
 require_once ("../db_connect.php");
+require_once ("../status_check.php");
 
+// Get login employee id from SESSION
+$loginEmployeeId = $_SESSION["employee_id"];
+
+// SQL to get login employee details
+$login_employee_details_sql = "SELECT * FROM employees WHERE employee_id = $loginEmployeeId";
+$login_employee_details_result = $conn->query($login_employee_details_sql);
+
+if ($login_employee_details_result->num_rows > 0) {
+    while ($row = $login_employee_details_result->fetch_assoc()) {
+        $loginEmployeeFirstName = $row["first_name"];
+        $loginEmployeeLastName = $row["last_name"];
+    }
+}
+
+// Get employee_id from the URL
 if (isset($_GET['employee_id'])) {
     $employeeId = $_GET['employee_id'];
 }
 
+// SQL to get the employee details
 $employee_details_sql = "SELECT * FROM employees WHERE employee_id = $employeeId";
 $employee_details_result = $conn->query($employee_details_sql);
 
@@ -27,6 +44,19 @@ $employee_group_access_sql = "SELECT DISTINCT groups.group_name, folders.folder_
 
 $employee_group_access_result = $conn->query($employee_group_access_sql);
 
+// SQL to get the performance review data
+$performance_review_sql = "SELECT * FROM performance_review WHERE reviewee_employee_id = $employeeId";
+$performance_review_result = $conn->query($performance_review_sql);
+if ($performance_review_result->num_rows > 0) {
+    while ($row = $performance_review_result->fetch_assoc()) {
+        $reviewType = $row["review_type"];
+        $reviewerEmployeeId = $row["reviewer_employee_id"];
+        $revieweeEmployeeId = $row["reviewee_employee_id"];
+        $reviewNotes = $row["review_notes"];
+        $reviewDate = $row["review_date"];
+    }
+}
+
 // Get the start date for the chart
 if ($employee_start_date_result->num_rows > 0) {
     while ($row = $employee_start_date_result->fetch_assoc()) {
@@ -34,6 +64,7 @@ if ($employee_start_date_result->num_rows > 0) {
     }
 }
 
+// SQL to get the wages data
 $employee_wages_sql = "SELECT * FROM wages WHERE employee_id = $employeeId ORDER BY date ASC";
 // Fetch wages data
 $employee_wages_result = $conn->query($employee_wages_sql);
@@ -183,6 +214,7 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
         $gender = $_POST['gender'];
         $dob = $_POST['dob'];
         $visaStatus = $_POST['visaStatus'];
+        $visaExpiryDate = $_POST['visaExpiryDate'];
         $address = $_POST['address'];
         $email = $_POST['email'];
         $phoneNumber = $_POST['phoneNumber'];
@@ -193,11 +225,21 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
         $startDate = $_POST['startDate'];
         $employmentType = $_POST['employmentType'];
         $department = $_POST['department'];
+        $section = $_POST['section'];
         $position = $_POST['position'];
+        $bankBuildingSociety = $_POST['bankBuildingSociety'];
+        $bsb = $_POST['bsb'];
+        $accountNumber = $_POST['accountNumber'];
+        $uniqueSuperannuationIdentifier = $_POST['uniqueSuperannuationIdentifier'];
+        $superannuationFundName = $_POST['superannuationFundName'];
+        $superannuationMemberNumber = $_POST['superannuationMemberNumber'];
+        $taxFileNumber = $_POST['taxFileNumber'];
+        $higherEducationLoanProgramme = $_POST['higherEducationLoanProgramme'];
+        $financialSupplementDebt = $_POST['financialSupplementDebt'];
 
-        $edit_employee_detail_sql = "UPDATE employees SET first_name = ?, last_name = ?, gender = ?, dob = ?, visa = ?, address = ?, email= ?, phone_number = ?, emergency_contact_name = ?, emergency_contact_phone_number = ?, emergency_contact_relationship = ?, start_date = ?, department = ?, employment_type = ?, position = ? WHERE employee_id = ?";
+        $edit_employee_detail_sql = "UPDATE employees SET first_name = ?, last_name = ?, gender = ?, dob = ?, visa = ?, visa_expiry_date = ?, address = ?, email= ?, phone_number = ?, emergency_contact_name = ?, emergency_contact_phone_number = ?, emergency_contact_relationship = ?, start_date = ?, department = ?, section = ?, employment_type = ?, position = ?, bank_building_society = ?, bsb = ?, account_number = ?, superannuation_fund_name = ?, unique_superannuation_identifier = ?, superannuation_member_number = ?, tax_file_number = ?, higher_education_loan_programme = ?, financial_supplement_debt = ? WHERE employee_id = ?";
         $edit_employee_detail_result = $conn->prepare($edit_employee_detail_sql);
-        $edit_employee_detail_result->bind_param("sssssssssssssssi", $firstName, $lastName, $gender, $dob, $visaStatus, $address, $email, $phoneNumber, $emergencyContactName, $emergencyContact, $emergencyContactRelationship, $startDate, $department, $employmentType, $position, $employeeIdToEdit);
+        $edit_employee_detail_result->bind_param("sssssssssssssssssssssssssii", $firstName, $lastName, $gender, $dob, $visaStatus, $visaExpiryDate, $address, $email, $phoneNumber, $emergencyContactName, $emergencyContact, $emergencyContactRelationship, $startDate, $department, $section, $employmentType, $position, $bankBuildingSociety, $bsb, $accountNumber, $superannuationFundName, $uniqueSuperannuationIdentifier, $superannuationMemberNumber, $taxFileNumber, $higherEducationLoanProgramme, $financialSupplementDebt, $employeeIdToEdit);
 
         if ($edit_employee_detail_result->execute()) {
             header("Location: " . $_SERVER['PHP_SELF'] . '?employee_id=' . $employeeIdToEdit);
@@ -267,6 +309,139 @@ if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST["employeeIdToDeactivat
         $error_message = "Error: " . $deactivate_employee_result . "<br>" . $conn->error;
     }
 }
+
+//  ========================= P E R F O R M A N C E  R E V I E W (1st Month Review) ========================= 
+if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST["revieweeEmployeeIdFirstMonthReview"])) {
+    $revieweeEmployeeId = $_POST["revieweeEmployeeIdFirstMonthReview"];
+    $reviewerEmployeeId = $_POST["reviewerEmployeeId"];
+    $reviewType = $_POST["reviewType"];
+    $reviewNotes = $_POST["reviewNotes"];
+    $reviewDate = $_POST["reviewDate"];
+
+    $submit_performance_review_sql = "INSERT INTO performance_review (review_type, reviewer_employee_id, reviewee_employee_id, review_notes, review_date) VALUES (?, ?, ? ,? ,?)";
+    $submit_performance_review_result = $conn->prepare($submit_performance_review_sql);
+
+    if (!$submit_performance_review_result) {
+        echo "Prepare failed: (" . $conn->errno . ") " . $conn->error;
+    } else {
+        $submit_performance_review_result->bind_param("siiss", $reviewType, $reviewerEmployeeId, $revieweeEmployeeId, $reviewNotes, $reviewDate);
+
+        // Execute the prepared statement
+        if ($submit_performance_review_result->execute()) {
+            header("Location: " . $_SERVER['PHP_SELF'] . '?employee_id=' . $employeeId);
+            exit();
+        } else {
+            echo "Error: " . $submit_performance_review_result->error;
+        }
+        // Close statement 
+        $submit_performance_review_result->close();
+    }
+}
+
+//  ========================= P E R F O R M A N C E  R E V I E W (3rd Month Review) ========================= 
+if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST["revieweeEmployeeIdThirdMonthReview"])) {
+    $revieweeEmployeeId = $_POST["revieweeEmployeeIdThirdMonthReview"];
+    $reviewerEmployeeId = $_POST["reviewerEmployeeId"];
+    $reviewType = $_POST["reviewType"];
+    $reviewNotes = $_POST["reviewNotes"];
+    $reviewDate = $_POST["reviewDate"];
+
+    $submit_performance_review_sql = "INSERT INTO performance_review (review_type, reviewer_employee_id, reviewee_employee_id, review_notes, review_date) VALUES (?, ?, ? ,? ,?)";
+    $submit_performance_review_result = $conn->prepare($submit_performance_review_sql);
+
+    if (!$submit_performance_review_result) {
+        echo "Prepare failed: (" . $conn->errno . ") " . $conn->error;
+    } else {
+        $submit_performance_review_result->bind_param("siiss", $reviewType, $reviewerEmployeeId, $revieweeEmployeeId, $reviewNotes, $reviewDate);
+
+        // Execute the prepared statement
+        if ($submit_performance_review_result->execute()) {
+            header("Location: " . $_SERVER['PHP_SELF'] . '?employee_id=' . $employeeId);
+            exit();
+        } else {
+            echo "Error: " . $submit_performance_review_result->error;
+        }
+        // Close statement 
+        $submit_performance_review_result->close();
+    }
+}
+
+//  ========================= P E R F O R M A N C E  R E V I E W (6th Month Review) ========================= 
+if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST["revieweeEmployeeIdSixthMonthReview"])) {
+    $revieweeEmployeeId = $_POST["revieweeEmployeeIdSixthMonthReview"];
+    $reviewerEmployeeId = $_POST["reviewerEmployeeId"];
+    $reviewType = $_POST["reviewType"];
+    $reviewNotes = $_POST["reviewNotes"];
+    $reviewDate = $_POST["reviewDate"];
+
+    $submit_performance_review_sql = "INSERT INTO performance_review (review_type, reviewer_employee_id, reviewee_employee_id, review_notes, review_date) VALUES (?, ?, ? ,? ,?)";
+    $submit_performance_review_result = $conn->prepare($submit_performance_review_sql);
+
+    if (!$submit_performance_review_result) {
+        echo "Prepare failed: (" . $conn->errno . ") " . $conn->error;
+    } else {
+        $submit_performance_review_result->bind_param("siiss", $reviewType, $reviewerEmployeeId, $revieweeEmployeeId, $reviewNotes, $reviewDate);
+
+        // Execute the prepared statement
+        if ($submit_performance_review_result->execute()) {
+            header("Location: " . $_SERVER['PHP_SELF'] . '?employee_id=' . $employeeId);
+            exit();
+        } else {
+            echo "Error: " . $submit_performance_review_result->error;
+        }
+        // Close statement 
+        $submit_performance_review_result->close();
+    }
+}
+
+//  ========================= P E R F O R M A N C E  R E V I E W (9th Month Review) ========================= 
+if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST["revieweeEmployeeIdNinthMonthReview"])) {
+    $revieweeEmployeeId = $_POST["revieweeEmployeeIdNinthMonthReview"];
+    $reviewerEmployeeId = $_POST["reviewerEmployeeId"];
+    $reviewType = $_POST["reviewType"];
+    $reviewNotes = $_POST["reviewNotes"];
+    $reviewDate = $_POST["reviewDate"];
+
+    $submit_performance_review_sql = "INSERT INTO performance_review (review_type, reviewer_employee_id, reviewee_employee_id, review_notes, review_date) VALUES (?, ?, ? ,? ,?)";
+    $submit_performance_review_result = $conn->prepare($submit_performance_review_sql);
+
+    if (!$submit_performance_review_result) {
+        echo "Prepare failed: (" . $conn->errno . ") " . $conn->error;
+    } else {
+        $submit_performance_review_result->bind_param("siiss", $reviewType, $reviewerEmployeeId, $revieweeEmployeeId, $reviewNotes, $reviewDate);
+
+        // Execute the prepared statement
+        if ($submit_performance_review_result->execute()) {
+            header("Location: " . $_SERVER['PHP_SELF'] . '?employee_id=' . $employeeId);
+            exit();
+        } else {
+            echo "Error: " . $submit_performance_review_result->error;
+        }
+        // Close statement 
+        $submit_performance_review_result->close();
+    }
+}
+
+//  ========================= O P E N  F O L D E R  (P A Y  R E V I E W) ========================= 
+if ($_SERVER["REQUEST_METHOD"] === "POST") {
+    if (isset($_POST["payReviewFolder"])) {
+        $directory = "../../../../../../Applications/Employees/$employeeId/Pay Review/111 - Pay Review";
+    } else if (isset($_POST["annualLeaveFolder"])) {
+        $directory = "../../../../../../Applications/Employees/$employeeId/Annual Leave";
+    } else if (isset($_POST["policiesFolder"])) {
+        $directory = "../../../../../../Applications/Employees/$employeeId/Policies";
+    }
+
+    // Escape the directory path for security
+    $escaped_directory = escapeshellarg($directory);
+
+    // Construct the shell command
+    $command = "open {$escaped_directory}";
+
+    // Execute the shell command
+    $output = shell_exec($command);
+}
+
 ?>
 
 <!DOCTYPE html>
@@ -288,38 +463,53 @@ if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST["employeeIdToDeactivat
             color: white;
             border: 1px solid #043f9d !important;
         }
-    </style>
 
-    <script>
-        window.onload = function () {
-            var chart = new CanvasJS.Chart("chartContainer", {
-                animationEnabled: true,
-                axisX: {
-                    titleFontFamily: "Avenir", // Set the font family for X axis title
-                    titleFontSize: 14, // Set the font size for X axis title
-                    titleFontWeight: "bold", // Set the font weight for X axis title
-                    titleFontColor: "#555", // Set the font color for X axis title
-                    labelFontFamily: "Avenir", // Set the font family for X axis labels
-                    labelFontSize: 12, // Set the font size for X axis labels
-                    labelFontColor: "#555" // Set the font color for X axis labels
-                },
-                data: [{
-                    type: "line",
-                    color: "#043f9d", // Set line color
-                    markerColor: "#043f9d", // Set marker color
-                    markerSize: 8, // Set marker size
-                    dataPoints: <?php echo json_encode($dataPoints, JSON_NUMERIC_CHECK); ?>
-                }]
-            });
-            chart.render();
+        /* Style for checked state */
+        .btn-check:checked+.btn-custom {
+            background-color: #043f9d !important;
+            border-color: #043f9d !important;
+            color: white !important;
         }
-    </script>
 
-    <style>
+        /* Optional: Adjust hover state if needed */
+        .btn-custom:hover {
+            background-color: #032b6b;
+            border-color: #032b6b;
+            color: white;
+        }
+
+        /* Remove watermark */
         .canvasjs-chart-credit {
             display: none !important;
         }
+
+        .form-check-input:checked+.form-check-label {
+            background-color: #27a745;
+            color: white;
+        }
+
+        /* Folder icon change when hover */
+        .folder-icon {
+            position: relative;
+            cursor: pointer;
+        }
+
+        .folder-icon:hover .fa-folder {
+            display: none !important;
+        }
+
+        .folder-icon:hover .fa-folder-open {
+            display: inline-block !important;
+        }
     </style>
+
+    <script>
+        // Capture scroll position before page refresh or redirection
+        window.addEventListener('beforeunload', function () {
+            sessionStorage.setItem('scrollPosition', window.scrollY);
+        });
+
+    </script>
 </head>
 
 <body class="background-color">
@@ -347,6 +537,7 @@ if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST["employeeIdToDeactivat
                         $startDate = $row['start_date'];
                         $employmentType = $row['employment_type'];
                         $department = $row['department'];
+                        $section = $row['section'];
                         $position = $row['position'];
                         $email = $row['email'];
                         $isActive = $row['is_active'];
@@ -354,7 +545,7 @@ if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST["employeeIdToDeactivat
                         $bsb = $row['bsb'];
                         $accountNumber = $row['account_number'];
                         $superannuationFundName = $row['superannuation_fund_name'];
-                        $uniqueSuperannuatioIdentifier = $row['unique_superannuation_identifier'];
+                        $uniqueSuperannuationIdentifier = $row['unique_superannuation_identifier'];
                         $superannuationMemberNumber = $row['superannuation_member_number'];
                         $taxFileNumber = $row['tax_file_number'];
                         $higherEducationLoanProgramme = $row['higher_education_loan_programme'];
@@ -450,7 +641,6 @@ if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST["employeeIdToDeactivat
                                         echo '<h5 class="fw-bold">' . $visaExpiryDate . '</h5>';
                                     }
                                     ?>
-
                                 </div>
                             </div>
                         </div>
@@ -536,9 +726,14 @@ if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST["employeeIdToDeactivat
                                     <h5 class="fw-bold"><?php echo isset($department) ? $department : "N/A"; ?></h5>
                                 </div>
                                 <div class="col-lg-6 col-xl-3 d-flex flex-column">
+                                    <small>Section</small>
+                                    <h5 class="fw-bold"><?php echo isset($section) ? $section : "N/A"; ?></h5>
+                                </div>
+                                <div class="col-lg-6 col-xl-3 d-flex flex-column">
                                     <small>Employment Type</small>
                                     <h5 class="fw-bold"><?php echo isset($employmentType) ? $employmentType : "N/A"; ?></h5>
                                 </div>
+
                                 <div class="col-lg-6 col-xl-3 d-flex flex-column">
                                     <small>Position</small>
                                     <h5 class="fw-bold"><?php echo isset($position) ? $position : "N/A"; ?></h5>
@@ -567,7 +762,7 @@ if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST["employeeIdToDeactivat
                                 <div class="col-lg-6 col-xl-3 d-flex flex-column">
                                     <small>Unique Superannuation Identifier</small>
                                     <h5 class="fw-bold">
-                                        <?php echo isset($uniqueSuperannuatioIdentifier) ? $uniqueSuperannuatioIdentifier : "N/A" ?>
+                                        <?php echo isset($uniqueSuperannuationIdentifier) ? $uniqueSuperannuationIdentifier : "N/A" ?>
                                     </h5>
                                 </div>
                                 <div class="col-lg-6 col-xl-3 d-flex flex-column">
@@ -601,6 +796,7 @@ if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST["employeeIdToDeactivat
                             </div>
                         </div>
                     </div>
+
                 </div>
                 <div class="col-lg-4">
                     <div class="card bg-white border-0 rounded shadow-lg mt-4 mt-lg-0">
@@ -615,18 +811,236 @@ if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST["employeeIdToDeactivat
                             </div>
                         </div>
                     </div>
+                    <?php if (isset($employmentType) && $employmentType == "Casual") {
+                        $firstMonthDueDate = date('Y-m-d', strtotime($startDate . ' +1 month'));
+                        $thirdMonthDueDate = date('Y-m-d', strtotime($startDate . ' +3 month'));
+                        $sixthMonthDueDate = date('Y-m-d', strtotime($startDate . ' +6 month'));
+                        $ninthMonthDueDate = date('Y-m-d', strtotime($startDate . ' +9 month'));
+
+                        // $reviewType = isset($reviewType) ? $reviewType : null;
+                        $revieweeEmployeeId = isset($revieweeEmployeeId) ? $revieweeEmployeeId : null;
+                        $reviewerEmployeeId = isset($reviewerEmployeeId) ? $reviewerEmployeeId : null;
+                        // $reviewDate = isset($reviewDate) ? $reviewDate : null;
+                        // $reviewNotes = isset($reviewNotes) ? $reviewNotes : null;
+                        ?>
+                        <div class="card bg-white border-0 rounded shadow-lg mt-4">
+                            <div class="p-3">
+                                <p class="fw-bold signature-color">Performance Review</p>
+                                <!-- First Month Review -->
+                                <div class="d-flex align-items-center">
+                                    <?php $hasFirstMonthReview = false;
+                                    foreach ($performance_review_result as $row) {
+                                        if ($row['review_type'] === "First Month Review") {
+                                            $hasFirstMonthReview = true;
+                                            break;
+                                        }
+                                    } ?>
+                                    <?php
+                                    $firstMonthDueDateFormat = new DateTime($firstMonthDueDate);
+                                    $firstMonthInterval = $today->diff($firstMonthDueDateFormat);
+                                    $firstMonthDaysDifference = $firstMonthInterval->format('%r%a');
+                                    ?>
+                                    <?php if ($hasFirstMonthReview && $revieweeEmployeeId == $employeeId) { ?>
+                                        <i class="fa-solid fa-star fa-lg text-warning"></i>
+                                    <?php } else { ?>
+                                        <i class="fa-solid fa-star fa-lg text-secondary"></i>
+                                    <?php } ?>
+                                    <div class="ms-3">
+                                        <div class="d-flex flex-column">
+                                            <div class="fw-bold">1<sup>st</sup> Month Review
+                                                <?php if ($hasFirstMonthReview && $revieweeEmployeeId == $employeeId) { ?>
+                                                    <span class="badge rounded-pill bg-success">Done</span>
+                                                <?php } else if (!$hasFirstMonthReview && $revieweeEmployeeId != $employeeId && $firstMonthDaysDifference < 7 && $firstMonthDaysDifference >= 0) { ?>
+                                                        <span class="badge rounded-pill bg-warning">Due Soon</span>
+                                                <?php } else if (!$hasFirstMonthReview && $firstMonthDaysDifference < 0) { ?>
+                                                            <span class="badge rounded-pill bg-danger">Past Due</span>
+                                                <?php } else {
+                                                    } ?>
+                                            </div>
+                                            <div>
+                                                <small class="text-secondary">Due: <?php echo $firstMonthDueDate ?></small>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <button class="btn ms-auto" data-bs-toggle="modal"
+                                        data-bs-target="#firstMonthPerformanceReviewModal">
+                                        <i class="fa-solid fa-arrow-up-right-from-square signature-color"></i>
+                                    </button>
+                                </div>
+
+                                <!-- Third Month Review -->
+                                <hr />
+                                <div class="d-flex align-items-center">
+                                    <?php $hasThirdMonthReview = false;
+                                    foreach ($performance_review_result as $row) {
+                                        if ($row['review_type'] === "Third Month Review") {
+                                            $hasThirdMonthReview = true;
+                                            break;
+                                        }
+                                    } ?>
+                                    <?php
+                                    $thirdMonthDueDateFormat = new DateTime($thirdMonthDueDate);
+                                    $thirdMonthInterval = $today->diff($thirdMonthDueDateFormat);
+                                    $thirdMonthDaysDifference = $thirdMonthInterval->format('%r%a');
+                                    ?>
+                                    <?php if ($hasThirdMonthReview && $revieweeEmployeeId == $employeeId) { ?>
+                                        <i class="fa-solid fa-star fa-lg text-warning"></i>
+                                    <?php } else { ?>
+                                        <i class="fa-solid fa-star fa-lg text-secondary"></i>
+                                    <?php } ?>
+                                    <div class="ms-3">
+                                        <div class="d-flex flex-column">
+                                            <div class="fw-bold">3<sup>rd</sup> Month Review
+                                                <?php if ($hasThirdMonthReview && $revieweeEmployeeId == $employeeId) { ?>
+                                                    <span class="badge rounded-pill bg-success">Done</span>
+                                                <?php } else if (!$hasThirdMonthReview && $revieweeEmployeeId != $employeeId && $thirdMonthDaysDifference < 7 && $thirdMonthDaysDifference >= 0) { ?>
+                                                        <span class="badge rounded-pill bg-warning">Due Soon</span>
+                                                <?php } else if (!$hasThirdMonthReview && $thirdMonthDaysDifference < 0) { ?>
+                                                            <span class="badge rounded-pill bg-danger">Past Due</span>
+                                                <?php } else {
+                                                    } ?>
+                                            </div>
+                                            <div>
+                                                <small class="text-secondary">Due: <?php echo $thirdMonthDueDate ?></small>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <button class="btn ms-auto" data-bs-toggle="modal"
+                                        data-bs-target="#thirdMonthPerformanceReviewModal">
+                                        <i class="fa-solid fa-arrow-up-right-from-square signature-color"></i>
+                                    </button>
+                                </div>
+
+                                <!-- Sixth Month Review -->
+                                <hr />
+                                <div class="d-flex align-items-center">
+                                    <?php $hasSixthMonthReview = false;
+                                    foreach ($performance_review_result as $row) {
+                                        if ($row['review_type'] === "Sixth Month Review") {
+                                            $hasSixthMonthReview = true;
+                                            break;
+                                        }
+                                    } ?>
+                                    <?php
+                                    $sixthMonthDueDateFormat = new DateTime($sixthMonthDueDate);
+                                    $sixthMonthInterval = $today->diff($sixthMonthDueDateFormat);
+                                    $sixthMonthDaysDifference = $sixthMonthInterval->format('%r%a');
+                                    ?>
+                                    <?php if ($hasSixthMonthReview && $revieweeEmployeeId == $employeeId) { ?>
+                                        <i class="fa-solid fa-star fa-lg text-warning"></i>
+                                    <?php } else { ?>
+                                        <i class="fa-solid fa-star fa-lg text-secondary"></i>
+                                    <?php } ?>
+                                    <div class="ms-3">
+                                        <div class="d-flex flex-column">
+                                            <div class="fw-bold">6<sup>th</sup> Month Review
+                                                <?php if ($hasSixthMonthReview && $revieweeEmployeeId == $employeeId) { ?>
+                                                    <span class="badge rounded-pill bg-success">Done</span>
+                                                <?php } else if (!$hasSixthMonthReview && $revieweeEmployeeId != $employeeId && $sixthMonthDaysDifference < 7 && $sixthMonthDaysDifference >= 0) { ?>
+                                                        <span class="badge rounded-pill bg-warning">Due Soon</span>
+                                                <?php } else if (!$hasSixthMonthReview && $sixthMonthDaysDifference < 0) { ?>
+                                                            <span class="badge rounded-pill bg-danger">Past Due</span>
+                                                <?php } else {
+                                                    } ?>
+                                            </div>
+                                            <div>
+                                                <small class="text-secondary">Due: <?php echo $sixthMonthDueDate ?></small>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <button class="btn ms-auto" data-bs-toggle="modal"
+                                        data-bs-target="#sixthMonthPerformanceReviewModal">
+                                        <i class="fa-solid fa-arrow-up-right-from-square signature-color"></i>
+                                    </button>
+                                </div>
+
+                                <!-- Ninth Month Review -->
+                                <hr />
+                                <div class="d-flex align-items-center">
+                                    <?php $hasNinthMonthReview = false;
+                                    foreach ($performance_review_result as $row) {
+                                        if ($row['review_type'] === "Ninth Month Review") {
+                                            $hasNinthMonthReview = true;
+                                            break;
+                                        }
+                                    } ?>
+                                    <?php
+                                    $ninthMonthDueDateFormat = new DateTime($ninthMonthDueDate);
+                                    $ninthMonthInterval = $today->diff($ninthMonthDueDateFormat);
+                                    $ninthMonthDaysDifference = $ninthMonthInterval->format('%r%a');
+
+                                    ?>
+                                    <?php if ($hasNinthMonthReview) { ?>
+                                        <i class="fa-solid fa-star fa-lg text-warning"></i>
+                                    <?php } else { ?>
+                                        <i class="fa-solid fa-star fa-lg text-secondary"></i>
+                                    <?php } ?>
+                                    <div class="ms-3">
+                                        <div class="d-flex flex-column">
+                                            <div class="fw-bold">9<sup>th</sup> Month Review
+                                                <?php if ($hasNinthMonthReview) { ?>
+                                                    <span class="badge rounded-pill bg-success">Done</span>
+                                                <?php } else if (!$hasNinthMonthReview && $revieweeEmployeeId != $employeeId && $reviewerEmployeeId != $loginEmployeeId && $ninthMonthDaysDifference < 7 && $ninthMonthDaysDifference >= 0) { ?>
+                                                        <span class="badge rounded-pill bg-warning">Due Soon</span>
+                                                <?php } else if (!$hasNinthMonthReview && $ninthMonthDaysDifference < 0) { ?>
+                                                            <span class="badge rounded-pill bg-danger">Past Due</span>
+                                                <?php } else {
+                                                    } ?>
+                                            </div>
+                                            <div>
+                                                <small class="text-secondary">Due: <?php echo $ninthMonthDueDate ?></small>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <button class="btn ms-auto" data-bs-toggle="modal"
+                                        data-bs-target="#ninthMonthPerformanceReviewModal">
+                                        <i class="fa-solid fa-arrow-up-right-from-square signature-color"></i>
+                                    </button>
+                                </div>
+
+                                <!-- <?php echo $firstMonthDueDate . " " . $thirdMonthDueDate . " " . $sixthMonthDueDate . " " . $ninthMonthDueDate ?> -->
+
+                            </div>
+                        </div>
+
+
+                    <?php } ?>
+
                     <div class="card bg-white border-0 rounded shadow-lg mt-4">
                         <div class="p-3">
                             <p class="fw-bold signature-color">Files</p>
                             <div class="d-flex justify-content-center">
                                 <div class="row col-12 p-2 background-color rounded shadow-sm">
                                     <div class="col-auto d-flex align-items-center">
-                                        <i class="fa-solid fa-folder text-warning fa-xl"></i>
+                                        <div class="col-auto d-flex align-items-center">
+                                            <span class="folder-icon tooltips" data-bs-toggle="tooltip"
+                                                data-bs-placement="top" title="Open Folder">
+                                                <div class="d-flex align-items-center">
+                                                    <i class="fa-solid fa-folder text-warning fa-xl"></i>
+                                                    <form method="POST">
+                                                        <input type="hidden" name="payReviewFolder">
+                                                        <button type="submit"
+                                                            class="btn btn-link p-0 m-0 text-decoration-underline fw-bold"><i
+                                                                class="fa-regular fa-folder-open text-warning fa-xl d-none"></i>
+                                                        </button>
+                                                    </form>
+                                                </div>
+                                            </span>
+                                        </div>
                                     </div>
                                     <div class="col">
                                         <div class="d-flex align-items-center">
                                             <div class="d-flex flex-column">
-                                                <span class="text-start fw-bold">Pay Review</span>
+                                                <form method="POST">
+                                                    <input type="hidden" name="payReviewFolder">
+                                                    <button type="submit"
+                                                        class="btn btn-link p-0 m-0 text-decoration-underline fw-bold">Pay
+                                                        Review</button>
+                                                </form>
                                                 <span>
                                                     <div class="d-flex align-items-center">
                                                         <small id="pay-review-directory-path" class="me-1 text-break"
@@ -641,31 +1055,34 @@ if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST["employeeIdToDeactivat
                                             </div>
                                         </div>
                                     </div>
-                                    <div class="col-auto d-flex align-items-center justify-content-end">
-                                        <div class="dropdown">
-                                            <button class="btn " type="button" id="dropdownMenuButton"
-                                                data-bs-toggle="dropdown" aria-expanded="false">
-                                                <i class="fa-solid fa-ellipsis" role="button"></i>
-                                            </button>
-                                            <ul class="dropdown-menu" aria-labelledby="dropdownMenuButton">
-                                                <li><a class="dropdown-item" href="../">Quick Access From Browser</a>
-                                                </li>
-                                                <li><a class="dropdown-item" onclick="copyDirectoryPath(this)">Copy
-                                                        Folder</a></li>
-                                            </ul>
-                                        </div>
-                                    </div>
                                 </div>
                             </div>
                             <div class="d-flex justify-content-center mt-3">
                                 <div class="row col-12 p-2 background-color rounded shadow-sm">
                                     <div class="col-auto d-flex align-items-center">
-                                        <i class="fa-solid fa-folder text-warning fa-xl"></i>
+                                        <span class="folder-icon tooltips" data-bs-toggle="tooltip" data-bs-placement="top"
+                                            title="Open Folder">
+                                            <div class="d-flex align-items-center">
+                                                <i class="fa-solid fa-folder text-warning fa-xl"></i>
+                                                <form method="POST">
+                                                    <input type="hidden" name="annualLeaveFolder">
+                                                    <button type="submit"
+                                                        class="btn btn-link p-0 m-0 text-decoration-underline fw-bold"><i
+                                                            class="fa-regular fa-folder-open text-warning fa-xl d-none"></i>
+                                                    </button>
+                                                </form>
+                                            </div>
+                                        </span>
                                     </div>
                                     <div class="col">
                                         <div class="d-flex align-items-center">
                                             <div class="d-flex flex-column">
-                                                <span class="text-start fw-bold">Annual Leave</span>
+                                                <form method="POST">
+                                                    <input type="hidden" name="annualLeaveFolder">
+                                                    <button type="submit"
+                                                        class="btn btn-link p-0 m-0 text-decoration-underline fw-bold">Annual
+                                                        Leave</button>
+                                                </form>
                                                 <span>
                                                     <div class="d-flex align-items-center">
                                                         <small id="annual-leaves-directory-path" class="me-1 text-break"
@@ -680,31 +1097,33 @@ if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST["employeeIdToDeactivat
                                             </div>
                                         </div>
                                     </div>
-                                    <div class="col-auto d-flex align-items-center justify-content-end">
-                                        <div class="dropdown">
-                                            <button class="btn " type="button" id="dropdownMenuButton"
-                                                data-bs-toggle="dropdown" aria-expanded="false">
-                                                <i class="fa-solid fa-ellipsis" role="button"></i>
-                                            </button>
-                                            <ul class="dropdown-menu" aria-labelledby="dropdownMenuButton">
-                                                <li><a class="dropdown-item" href="../../">Quick Access From Browser</a>
-                                                </li>
-                                                <li><a class="dropdown-item" onclick="copyDirectoryPath(this)">Copy
-                                                        Folder</a></li>
-                                            </ul>
-                                        </div>
-                                    </div>
                                 </div>
                             </div>
                             <div class="d-flex justify-content-center mt-3">
                                 <div class="row col-12 p-2 background-color rounded shadow-sm">
                                     <div class="col-auto d-flex align-items-center">
-                                        <i class="fa-solid fa-folder text-warning fa-xl"></i>
+                                        <span class="folder-icon tooltips" data-bs-toggle="tooltip" data-bs-placement="top"
+                                            title="Open Folder">
+                                            <div class="d-flex align-items-center">
+                                                <i class="fa-solid fa-folder text-warning fa-xl"></i>
+                                                <form method="POST">
+                                                    <input type="hidden" name="policiesFolder">
+                                                    <button type="submit"
+                                                        class="btn btn-link p-0 m-0 text-decoration-underline fw-bold"><i
+                                                            class="fa-regular fa-folder-open text-warning fa-xl d-none"></i>
+                                                    </button>
+                                                </form>
+                                            </div>
+                                        </span>
                                     </div>
                                     <div class="col">
                                         <div class="d-flex align-items-center">
                                             <div class="d-flex flex-column">
-                                                <span class="text-start fw-bold">Policies</span>
+                                            <form method="POST">
+                                                    <input type="hidden" name="policiesFolder">
+                                                    <button type="submit"
+                                                        class="btn btn-link p-0 m-0 text-decoration-underline fw-bold">Policies</button>
+                                                </form>
                                                 <span>
                                                     <div class="d-flex align-items-center">
                                                         <small id="directory-path" class="me-1 text-break"
@@ -719,25 +1138,11 @@ if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST["employeeIdToDeactivat
                                             </div>
                                         </div>
                                     </div>
-                                    <div class="col-auto d-flex align-items-center justify-content-end">
-                                        <div class="dropdown">
-                                            <button class="btn " type="button" id="dropdownMenuButton"
-                                                data-bs-toggle="dropdown" aria-expanded="false">
-                                                <i class="fa-solid fa-ellipsis" role="button"></i>
-                                            </button>
-                                            <ul class="dropdown-menu" aria-labelledby="dropdownMenuButton">
-                                                <li><a class="dropdown-item" href="../../">Quick Access From Browser</a>
-                                                </li>
-                                                <li><a class="dropdown-item" onclick="copyDirectoryPath(this)">Copy
-                                                        Folder</a></li>
-                                            </ul>
-                                        </div>
-                                    </div>
                                 </div>
                             </div>
                         </div>
                     </div>
-                    <!-- <div class="card bg-white border-0 rounded shadow-lg mt-4">
+                    <div class="card bg-white border-0 rounded shadow-lg mt-4">
                         <div class="p-3">
                             <div class="d-flex justify-content-between">
                                 <p class="fw-bold signature-color">Policies</p>
@@ -747,7 +1152,7 @@ if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST["employeeIdToDeactivat
                             <a href="http://localhost/FUJI-Directories/CheckDirectory/Sample_Smoking_Policy.jpeg">
                                 Smoking and Vaping Policy </a>
                         </div>
-                    </div> -->
+                    </div>
                     <div class="card bg-white border-0 rounded shadow-lg mt-4">
                         <div class="p-3">
                             <p class="fw-bold signature-color">Access</p>
@@ -893,7 +1298,8 @@ if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST["employeeIdToDeactivat
                                                         <span class="input-group-text">$</span>
                                                         <input type="number" min="0" class="form-control rounded-end "
                                                             id="newWage" name="newWage">
-                                                        <button class="btn btn-dark ms-2 rounded">Modify Wage</button>
+                                                        <button class="btn btn-dark ms-2 rounded">Modify
+                                                            Wage</button>
                                                     </div>
                                                 </div>
                                             </div>
@@ -910,8 +1316,8 @@ if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST["employeeIdToDeactivat
                             <div class="modal-content">
                                 <div class="modal-header">
                                     <h5 class="modal-title" id="deleteConfirmationLabel">Confirm Deletion</h5>
-                                    <button type="button" class="btn-close" data-bs-dismiss="modal"
-                                        aria-label="Close"></button>
+                                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close">
+                                    </button>
                                 </div>
                                 <div class="modal-body">
                                     <!-- Delete form -->
@@ -1018,22 +1424,23 @@ if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST["employeeIdToDeactivat
                                                             id="lastName"
                                                             value="<?php echo (isset($lastName) ? $lastName : "") ?>">
                                                     </div>
-                                                    <div class="form-group col-md-3 mt-3">
+                                                    <div class="form-group col-md-2 mt-3">
                                                         <label for="gender" class="fw-bold">Gender</label>
                                                         <select class="form-select" aria-label="gender" name="gender">
                                                             <option disabled selected hidden></option>
                                                             <option value="Male" <?php if (isset($gender) && $gender == "Male")
                                                                 echo "selected"; ?>>Male</option>
                                                             <option value="Female" <?php if (isset($gender) && $gender == "Female")
-                                                                echo "selected"; ?>>Female</option>
+                                                                echo "selected"; ?>>Female
+                                                            </option>
                                                         </select>
                                                     </div>
-                                                    <div class="form-group col-md-4 mt-3">
+                                                    <div class="form-group col-md-3 mt-3">
                                                         <label for="dob" class="fw-bold">Date of Birth</label>
                                                         <input type="date" name="dob" class="form-control" id="dob"
                                                             value="<?php echo (isset($dob) ? $dob : "") ?>">
                                                     </div>
-                                                    <div class="form-group col-md-5 mt-3">
+                                                    <div class="form-group col-md-4 mt-3">
                                                         <label for="visaStatus" class="fw-bold">Visa Status</label>
                                                         <select class="form-select" aria-label="Visa Status"
                                                             name="visaStatus">
@@ -1048,9 +1455,17 @@ if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST["employeeIdToDeactivat
                                                                 echo "selected"; ?>>Student
                                                             </option>
                                                             <option value="Working Holiday" <?php if (isset($visaStatus) && $visaStatus === "Working Holiday")
-                                                                echo "selected"; ?>>Working Holiday
+                                                                echo "selected"; ?>>Working
+                                                                Holiday
                                                             </option>
                                                         </select>
+                                                    </div>
+                                                    <div class="form-group col-md-3 mt-3">
+                                                        <label for="visaExpiryDate" class="fw-bold">Visa Expiry
+                                                            Date</label>
+                                                        <input type="date" name="visaExpiryDate" class="form-control"
+                                                            id="visaExpiryDate"
+                                                            value="<?php echo (isset($visaExpiryDate) ? $visaExpiryDate : "") ?>">
                                                     </div>
                                                 </div>
                                                 <div class="row">
@@ -1066,7 +1481,8 @@ if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST["employeeIdToDeactivat
                                                             value="<?php echo (isset($email) && $email !== "" ? $email : "") ?>">
                                                     </div>
                                                     <div class="form-group col-md-6 mt-3">
-                                                        <label for="phoneNumber" class="fw-bold">Phone Number</label>
+                                                        <label for="phoneNumber" class="fw-bold">Phone
+                                                            Number</label>
                                                         <input type="text" class="form-control" id="phoneNumber"
                                                             name="phoneNumber"
                                                             value="<?php echo (isset($phoneNumber) && $phoneNumber !== "" ? $phoneNumber : "") ?>">
@@ -1080,9 +1496,9 @@ if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST["employeeIdToDeactivat
                                                             name="emergencyContactName"
                                                             value="<?php echo (isset($emergencyContactName) && $emergencyContactName !== "" ? $emergencyContactName : "") ?>">
                                                     </div>
-                                                    <div class="form-group col-md-6">
+                                                    <div class="form-group col-md-6 mt-3 mt-md-0">
                                                         <label for="emergencyContactRelationship" class="fw-bold">Emergency
-                                                            Contact Relationship</label>
+                                                            Contact Relationship </label>
                                                         <input type="text" class="form-control"
                                                             id="emergencyContactRelationship"
                                                             name="emergencyContactRelationship"
@@ -1118,32 +1534,69 @@ if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST["employeeIdToDeactivat
                                                             name="employmentType">
                                                             <option disabled selected hidden></option>
                                                             <option value="Full-Time" <?php if (isset($employmentType) && $employmentType == "Full-Time")
-                                                                echo "selected"; ?>>Full-Time
+                                                                echo "selected"; ?>>
+                                                                Full-Time
                                                             </option>
                                                             <option value="Part-Time" <?php if (isset($employmentType) && $employmentType == "Part-Time")
-                                                                echo "selected"; ?>>Part-Time
+                                                                echo "selected"; ?>>
+                                                                Part-Time
                                                             </option>
                                                             <option value="Casual" <?php if (isset($employmentType) && $employmentType == "Casual")
-                                                                echo "selected"; ?>>Casual
+                                                                echo "selected"; ?>>
+                                                                Casual
                                                             </option>
                                                         </select>
                                                     </div>
+
                                                     <div class="form-group col-md-4 mt-3">
                                                         <label for="department" class="fw-bold">Department</label>
-                                                        <select class="form-select" aria-label="deparment"
-                                                            name="department">
+                                                        <select class="form-select" aria-label="deparment" name="department"
+                                                            id="department">
                                                             <option disabled selected hidden></option>
                                                             <option value="Electrical" <?php if (isset($department) && $department == "Electrical")
-                                                                echo "selected"; ?>>Electrical
+                                                                echo "selected"; ?>>
+                                                                Electrical
                                                             </option>
                                                             <option value="Sheet Metal" <?php if (isset($department) && $department == "Sheet Metal")
-                                                                echo "selected"; ?>>Sheet Metal
+                                                                echo "selected"; ?>>
+                                                                Sheet Metal
                                                             </option>
                                                             <option value="Office" <?php if (isset($department) && $department == "Office")
                                                                 echo "selected"; ?>>Office
                                                             </option>
                                                         </select>
                                                     </div>
+
+                                                    <div class="form-group col-md-4 mt-3" id="sectionField"
+                                                        style="display:none">
+                                                        <label for="section" class="fw-bold">Section</label>
+                                                        <select class="form-select" aria-label="Section" name="section"
+                                                            id="section">
+                                                            <!-- Options will be dynamically populated based on department selection -->
+                                                            <?php
+                                                            // PHP to generate options based on $department value
+                                                            if (isset($department)) {
+                                                                switch ($department) {
+                                                                    case "Electrical":
+                                                                        echo '<option value="Panel" id="panelSection" ' . (isset($section) && $section == "Panel" ? "selected" : "") . '>Panel</option>';
+                                                                        echo '<option value="Roof" id="roofSection" ' . (isset($section) && $section == "Roof" ? "selected" : "") . '>Roof</option>';
+                                                                        break;
+                                                                    case "Sheet Metal":
+                                                                        echo '<option value="Programmer" id="ProgrammerSection" ' . (isset($section) && $section == "Programmer" ? "selected" : "") . '>Programmer</option>';
+                                                                        echo '<option value="Painter" id="painterSection" ' . (isset($section) && $section == "Painter" ? "selected" : "") . '>Painter</option>';
+                                                                        break;
+                                                                    case "Office":
+                                                                        echo '<option value="Engineer" id="engineerSection" ' . (isset($section) && $section == "Engineer" ? "selected" : "") . '>Engineer</option>';
+                                                                        echo '<option value="Accountant" id="accountantSection" ' . (isset($section) && $section == "Accountant" ? "selected" : "") . '>Accountant</option>';
+                                                                        break;
+                                                                    default:
+                                                                        break;
+                                                                }
+                                                            }
+                                                            ?>
+                                                        </select>
+                                                    </div>
+
                                                     <div class="form-group col-md-5 mt-3">
                                                         <label for="position" class="fw-bold">Position</label>
                                                         <input type="text" class="form-control" id="position"
@@ -1151,10 +1604,115 @@ if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST["employeeIdToDeactivat
                                                             value="<?php echo (isset($position) && $position !== "" ? $position : "") ?>">
                                                     </div>
                                                     <div class="form-group col-md-12 mt-3">
-                                                        <label for="policy" class="fw-bold">Upload Policy Files</label>
+                                                        <label for="policy" class="fw-bold">Upload Policy
+                                                            Files</label>
                                                         <div class="input-group">
                                                             <input type="file" id="policy" name="policy_files[]"
                                                                 class="form-control" multiple>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                                <div class="row">
+                                                    <p class="signature-color fw-bold mt-5"> Banking, Super and Tax
+                                                        Details
+                                                    </p>
+                                                    <div class="form-group col-md-5">
+                                                        <label for="bankBuildingSociety" class="fw-bold">Bank/Building
+                                                            Society</label>
+                                                        <input type="text" class="form-control" id="bankBuildingSociety"
+                                                            name="bankBuildingSociety"
+                                                            value="<?php echo (isset($bankBuildingSociety) && $bankBuildingSociety !== "" ? $bankBuildingSociety : "") ?>">
+                                                    </div>
+                                                    <div class="form-group col-md-3 mt-3 mt-md-0">
+                                                        <label for="bsb" class="fw-bold">BSB</label>
+                                                        <input type="text" class="form-control" id="bsb" name="bsb"
+                                                            value="<?php echo (isset($bsb) && $bsb !== "" ? $bsb : "") ?>">
+                                                    </div>
+                                                    <div class="form-group col-md-4 mt-3 mt-md-0">
+                                                        <label for="accountNumber" class="fw-bold">Account
+                                                            Number</label>
+                                                        <input type="text" class="form-control" id="accountNumber"
+                                                            name="accountNumber"
+                                                            value="<?php echo (isset($accountNumber) && $accountNumber !== "" ? $accountNumber : "") ?>">
+                                                    </div>
+                                                    <div class="form-group col-md-6 mt-3">
+                                                        <label for="uniqueSuperannuationIdentifier" class="fw-bold">Unique
+                                                            Superannuation
+                                                            Identifier</label>
+                                                        <input type="text" class="form-control"
+                                                            id="uniqueSuperannuationIdentifier"
+                                                            name="uniqueSuperannuationIdentifier"
+                                                            value="<?php echo (isset($uniqueSuperannuationIdentifier) && $uniqueSuperannuationIdentifier !== "" ? $uniqueSuperannuationIdentifier : "") ?>">
+                                                    </div>
+                                                    <div class="form-group col-md-6 mt-3">
+                                                        <label for="superannuationFundName" class="fw-bold">Superannuation
+                                                            Fund Name</label>
+                                                        <input type="text" class="form-control" id="superannuationFundName"
+                                                            name="superannuationFundName"
+                                                            value="<?php echo (isset($superannuationFundName) && $superannuationFundName !== "" ? $superannuationFundName : "") ?>">
+                                                    </div>
+                                                    <div class="form-group col-md-6 mt-3">
+                                                        <label for="superannuationMemberNumber"
+                                                            class="fw-bold">Superannuation Member Number</label>
+                                                        <input type="text" class="form-control"
+                                                            id="superannuationMemberNumber"
+                                                            name="superannuationMemberNumber"
+                                                            value="<?php echo (isset($superannuationMemberNumber) && $superannuationMemberNumber !== "" ? $superannuationMemberNumber : "") ?>">
+                                                    </div>
+                                                    <div class="form-group col-md-6 mt-3">
+                                                        <label for="taxFileNumber" class="fw-bold">Tax File
+                                                            Number</label>
+                                                        <input type="text" class="form-control" id="taxFileNumber"
+                                                            name="taxFileNumber"
+                                                            value="<?php echo (isset($taxFileNumber) && $taxFileNumber !== "" ? $taxFileNumber : "") ?>">
+                                                    </div>
+                                                    <div class="form-group col-md-6 mt-3">
+                                                        <div class="d-flex flex-column">
+                                                            <label for="higherEducationLoanProgramme"
+                                                                class="fw-bold"><small>Higher Education Loan
+                                                                    Programme?</small></label>
+                                                            <div class="btn-group col-3 col-md-2" role="group">
+                                                                <input type="radio" class="btn-check"
+                                                                    name="higherEducationLoanProgramme"
+                                                                    id="higherEducationLoanProgrammeYes" value="1"
+                                                                    autocomplete="off" <?php echo ($higherEducationLoanProgramme == 1) ? 'checked' : ''; ?>>
+                                                                <label class="btn btn-sm btn-custom"
+                                                                    for="higherEducationLoanProgrammeYes"
+                                                                    style="color:#043f9d; border: 1px solid #043f9d">Yes</label>
+
+                                                                <input type="radio" class="btn-check"
+                                                                    name="higherEducationLoanProgramme"
+                                                                    id="higherEducationLoanProgrammeNo" value="0"
+                                                                    autocomplete="off" <?php echo ($higherEducationLoanProgramme == 0) ? 'checked' : ''; ?>>
+                                                                <label class="btn btn-sm btn-custom"
+                                                                    for="higherEducationLoanProgrammeNo"
+                                                                    style="color:#043f9d; border: 1px solid #043f9d">No</label>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                    <div class="form-group col-md-6 mt-3">
+                                                        <div class="d-flex flex-column">
+                                                            <label for="financialSupplementDebt"
+                                                                class="fw-bold"><small>Financial Supplement
+                                                                    Debt?</small></label>
+                                                            <div class="btn-group col-3 col-md-2" role="group">
+                                                                <input type="radio" class="btn-check"
+                                                                    name="financialSupplementDebt"
+                                                                    id="financialSupplementDebtYes" value="1"
+                                                                    autocomplete="off" <?php echo ($financialSupplementDebt == 1) ? 'checked' : ''; ?> />
+                                                                <label class="btn btn-sm btn-custom"
+                                                                    for="financialSupplementDebtYes"
+                                                                    style="color:#043f9d; border: 1px solid #043f9d">
+                                                                    Yes</label>
+
+                                                                <input type="radio" class="btn-check"
+                                                                    name="financialSupplementDebt"
+                                                                    id="financialSupplementDebtNo" value="0"
+                                                                    autocomplete="off" <?php echo ($financialSupplementDebt == 0) ? 'checked' : ''; ?> />
+                                                                <label class="btn btn-sm btn-custom"
+                                                                    for="financialSupplementDebtNo"
+                                                                    style="color:#043f9d; border: 1px solid #043f9d">No</label>
+                                                            </div>
                                                         </div>
                                                     </div>
                                                 </div>
@@ -1180,7 +1738,6 @@ if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST["employeeIdToDeactivat
                                         aria-label="Close"></button>
                                 </div>
                                 <div class="modal-body">
-
                                     <!-- Drag and Drop area -->
                                     <div class="border border-dashed p-4 text-center" id="dropZone">
                                         <p class="mb-0">Drag & Drop your documents here or <br>
@@ -1191,208 +1748,539 @@ if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST["employeeIdToDeactivat
                                     </div>
                                     <form method="POST">
                                         <input type="file" id="fileInput" name="policiesToSubmit" class="d-none" multiple />
-
                                         <!-- Display uploaded file names -->
                                         <div id="fileList" class="mt-3"></div>
                                         <div class="d-flex justify-content-center">
-                                            <button type="submit" class="btn btn-dark btn-sm"> Add Documents</button>
+                                            <button type="submit" class="btn btn-dark btn-sm"> Add
+                                                Documents</button>
                                         </div>
                                     </form>
                                 </div>
                             </div>
                         </div>
                     </div>
+                    <!-- ================== Performance Review Modal (First Month)================== -->
+                    <div class="modal fade" id="firstMonthPerformanceReviewModal" tabindex="-1"
+                        aria-labelledby="firstMonthPerformanceReviewModalLabel" aria-hidden="true">
+                        <div class="modal-dialog">
+                            <div class="modal-content">
+                                <div class="modal-header">
+                                    <h5 class="modal-title" id="firstMonthPerformanceReviewModalLabel">1st Month Review</h5>
+                                    <button type="button" class="btn-close" data-bs-dismiss="modal"
+                                        aria-label="Close"></button>
+                                </div>
+                                <form method="POST">
+                                    <?php
+                                    $hasFirstMonthReview = false;
+                                    $firstMonthReviewDate = '';
+                                    $firstMonthReviewerEmployeeId = '';
+                                    foreach ($performance_review_result as $row) {
+                                        if ($row['review_type'] === "First Month Review") {
+                                            $hasFirstMonthReview = true;
+                                            $firstMonthReviewDate = $row['review_date'];
+                                            $firstMonthReviewerEmployeeId = $row['reviewer_employee_id'];
+                                            break;
+                                        }
+                                    } ?>
+
+                                    <?php
+                                    $query = "SELECT first_name, last_name FROM employees WHERE employee_id = ?";
+                                    $stmt = $conn->prepare($query);
+                                    $stmt->bind_param("s", $firstMonthReviewerEmployeeId);
+                                    $stmt->execute();
+                                    $stmt->bind_result($firstMonthFirstName, $firstMonthLastName);
+                                    $stmt->fetch();
+                                    $stmt->close();
+                                    ?>
+                                    <div class="modal-body">
+                                        <p><strong>Reviewer: </strong><span
+                                                class="signature-color fw-bold"><?php echo $firstMonthFirstName . " " . $firstMonthLastName ?>
+                                            </span></p>
+                                        <p><strong>Reviewee: </strong><span class="signature-color fw-bold">
+                                                <?php echo $firstName . " " . $lastName ?> </span></p>
+                                        <?php if ($hasFirstMonthReview && $revieweeEmployeeId == $employeeId) { ?>
+                                            <div class="review-details">
+                                                <p><strong>Review Date:</strong>
+                                                    <?php echo htmlspecialchars($firstMonthReviewDate); ?>
+                                                </p>
+                                                <p><strong>Reviewee Employee ID:</strong>
+                                                    <?php echo htmlspecialchars($revieweeEmployeeId); ?></p>
+                                                <p><strong>Review Notes:</strong>
+                                                    <?php echo htmlspecialchars($reviewNotes); ?></p>
+                                            </div>
+                                        <?php } else { ?>
+                                            <input type="hidden" name="revieweeEmployeeIdFirstMonthReview"
+                                                value="<?php echo htmlspecialchars($employeeId); ?>" />
+                                            <input type="hidden" name="reviewerEmployeeId"
+                                                value="<?php echo htmlspecialchars($loginEmployeeId); ?>" />
+                                            <input type="hidden" name="reviewType" value="First Month Review" />
+                                            <div class="mb-3">
+                                                <label for="reviewDate" class="form-label"><strong>Review Date:</strong></label>
+                                                <input type="date" class="form-control" id="reviewDate" name="reviewDate">
+                                            </div>
+                                            <div class="mb-3">
+                                                <label for="reviewNotes" class="form-label"><strong>Review
+                                                        Notes:</strong></label>
+                                                <textarea class="form-control" id="reviewNotes" name="reviewNotes"
+                                                    rows="4"></textarea>
+                                            </div>
+
+                                        <?php } ?>
+                                    </div>
+                                    <!-- Additional Modal Actions -->
+                                    <div class="modal-footer">
+                                        <button type="button" class="btn btn-secondary"
+                                            data-bs-dismiss="modal">Close</button>
+                                        <button type="submit" class="btn btn-dark">Submit Review</button>
+                                    </div>
+                                </form>
+                            </div>
+                        </div>
+                    </div>
+                    <!-- ================== Performance Review Modal (Third Month)================== -->
+                    <div class="modal fade" id="thirdMonthPerformanceReviewModal" tabindex="-1"
+                        aria-labelledby="thirdMonthPerformanceReviewModalLabel" aria-hidden="true">
+                        <div class="modal-dialog">
+                            <div class="modal-content">
+                                <div class="modal-header">
+                                    <h5 class="modal-title" id="thirdMonthPerformanceReviewModalLabel">1st Month Review</h5>
+                                    <button type="button" class="btn-close" data-bs-dismiss="modal"
+                                        aria-label="Close"></button>
+                                </div>
+                                <form method="POST">
+                                    <?php $hasThirdMonthReview = false;
+                                    foreach ($performance_review_result as $row) {
+                                        if ($row['review_type'] === "Third Month Review") {
+                                            $hasThirdMonthReview = true;
+                                            break;
+                                        }
+                                    } ?>
+                                    <div class="modal-body">
+                                        <p><strong>Reviewer: </strong><span
+                                                class="signature-color fw-bold"><?php echo $loginEmployeeFirstName . " " . $loginEmployeeLastName ?>
+                                            </span></p>
+                                        <p><strong>Reviewee: </strong><span class="signature-color fw-bold">
+                                                <?php echo $firstName . " " . $lastName ?> </span></p>
+                                        <?php if ($hasThirdMonthReview && $revieweeEmployeeId == $employeeId && $reviewerEmployeeId == $loginEmployeeId) { ?>
+                                            <div class="review-details">
+                                                <p><strong>Review Date:</strong> <?php echo htmlspecialchars($reviewDate); ?>
+                                                </p>
+                                                <p><strong>Reviewee Employee ID:</strong>
+                                                    <?php echo htmlspecialchars($revieweeEmployeeId); ?></p>
+                                                <p><strong>Review Notes:</strong>
+                                                    <?php echo htmlspecialchars($reviewNotes); ?></p>
+                                            </div>
+                                        <?php } else { ?>
+                                            <input type="hidden" name="revieweeEmployeeIdThirdMonthReview"
+                                                value="<?php echo htmlspecialchars($employeeId); ?>" />
+                                            <input type="hidden" name="reviewerEmployeeId"
+                                                value="<?php echo htmlspecialchars($loginEmployeeId); ?>" />
+                                            <input type="hidden" name="reviewType" value="Third Month Review" />
+                                            <div class="mb-3">
+                                                <label for="reviewDate" class="form-label"><strong>Review Date:</strong></label>
+                                                <input type="date" class="form-control" id="reviewDate" name="reviewDate">
+                                            </div>
+                                            <div class="mb-3">
+                                                <label for="reviewNotes" class="form-label"><strong>Review
+                                                        Notes:</strong></label>
+                                                <textarea class="form-control" id="reviewNotes" name="reviewNotes"
+                                                    rows="4"></textarea>
+                                            </div>
+
+                                        <?php } ?>
+                                    </div>
+                                    <!-- Additional Modal Actions -->
+                                    <div class="modal-footer">
+                                        <button type="button" class="btn btn-secondary"
+                                            data-bs-dismiss="modal">Close</button>
+                                        <button type="submit" class="btn btn-dark">Submit Review</button>
+                                    </div>
+                                </form>
+                            </div>
+                        </div>
+                    </div>
+                    <!-- ================== Performance Review Modal (Sixth Month)================== -->
+                    <div class="modal fade" id="sixthMonthPerformanceReviewModal" tabindex="-1"
+                        aria-labelledby="sixthMonthPerformanceReviewModalLabel" aria-hidden="true">
+                        <div class="modal-dialog">
+                            <div class="modal-content">
+                                <div class="modal-header">
+                                    <h5 class="modal-title" id="sixthMonthPerformanceReviewModalLabel">6th Month Review</h5>
+                                    <button type="button" class="btn-close" data-bs-dismiss="modal"
+                                        aria-label="Close"></button>
+                                </div>
+                                <form method="POST">
+                                    <?php $hasSixthMonthReview = false;
+                                    foreach ($performance_review_result as $row) {
+                                        if ($row['review_type'] === "Sixth Month Review") {
+                                            $hasSixthMonthReview = true;
+                                            break;
+                                        }
+                                    } ?>
+                                    <div class="modal-body">
+                                        <p><strong>Reviewer: </strong><span
+                                                class="signature-color fw-bold"><?php echo $loginEmployeeFirstName . " " . $loginEmployeeLastName ?>
+                                            </span></p>
+                                        <p><strong>Reviewee: </strong><span class="signature-color fw-bold">
+                                                <?php echo $firstName . " " . $lastName ?> </span></p>
+                                        <?php if ($hasSixthMonthReview && $revieweeEmployeeId == $employeeId && $reviewerEmployeeId == $loginEmployeeId) { ?>
+                                            <div class="review-details">
+                                                <p><strong>Review Date:</strong> <?php echo htmlspecialchars($reviewDate); ?>
+                                                </p>
+                                                <p><strong>Reviewee Employee ID:</strong>
+                                                    <?php echo htmlspecialchars($revieweeEmployeeId); ?></p>
+                                                <p><strong>Review Notes:</strong>
+                                                    <?php echo htmlspecialchars($reviewNotes); ?></p>
+                                            </div>
+                                        <?php } else { ?>
+                                            <input type="hidden" name="revieweeEmployeeIdSixthMonthReview"
+                                                value="<?php echo htmlspecialchars($employeeId); ?>" />
+                                            <input type="hidden" name="reviewerEmployeeId"
+                                                value="<?php echo htmlspecialchars($loginEmployeeId); ?>" />
+                                            <input type="hidden" name="reviewType" value="Sixth Month Review" />
+                                            <div class="mb-3">
+                                                <label for="reviewDate" class="form-label"><strong>Review Date:</strong></label>
+                                                <input type="date" class="form-control" id="reviewDate" name="reviewDate">
+                                            </div>
+                                            <div class="mb-3">
+                                                <label for="reviewNotes" class="form-label"><strong>Review
+                                                        Notes:</strong></label>
+                                                <textarea class="form-control" id="reviewNotes" name="reviewNotes"
+                                                    rows="4"></textarea>
+                                            </div>
+                                        <?php } ?>
+                                    </div>
+                                    <!-- Additional Modal Actions -->
+                                    <div class="modal-footer">
+                                        <button type="button" class="btn btn-secondary"
+                                            data-bs-dismiss="modal">Close</button>
+                                        <button type="submit" class="btn btn-dark">Submit Review</button>
+                                    </div>
+                                </form>
+                            </div>
+                        </div>
+                    </div>
+                    <!-- ================== Performance Review Modal (Ninth Month)================== -->
+                    <div class="modal fade" id="ninthMonthPerformanceReviewModal" tabindex="-1"
+                        aria-labelledby="ninthMonthPerformanceReviewModalLabel" aria-hidden="true">
+                        <div class="modal-dialog">
+                            <div class="modal-content">
+                                <div class="modal-header">
+                                    <h5 class="modal-title" id="ninthMonthPerformanceReviewModalLabel">6th Month Review</h5>
+                                    <button type="button" class="btn-close" data-bs-dismiss="modal"
+                                        aria-label="Close"></button>
+                                </div>
+                                <form method="POST">
+                                    <?php $hasNinthMonthReview = false;
+                                    foreach ($performance_review_result as $row) {
+                                        if ($row['review_type'] === "Ninth Month Review") {
+                                            $hasNinthMonthReview = true;
+                                            break;
+                                        }
+                                    } ?>
+                                    <div class="modal-body">
+                                        <p><strong>Reviewer: </strong><span
+                                                class="signature-color fw-bold"><?php echo $loginEmployeeFirstName . " " . $loginEmployeeLastName ?>
+                                            </span></p>
+                                        <p><strong>Reviewee: </strong><span class="signature-color fw-bold">
+                                                <?php echo $firstName . " " . $lastName ?> </span></p>
+                                        <?php if ($hasNinthMonthReview && $revieweeEmployeeId == $employeeId && $reviewerEmployeeId == $loginEmployeeId) { ?>
+                                            <div class="review-details">
+                                                <p><strong>Review Date:</strong> <?php echo htmlspecialchars($reviewDate); ?>
+                                                </p>
+                                                <p><strong>Reviewee Employee ID:</strong>
+                                                    <?php echo htmlspecialchars($revieweeEmployeeId); ?></p>
+                                                <p><strong>Review Notes:</strong>
+                                                    <?php echo htmlspecialchars($reviewNotes); ?></p>
+                                            </div>
+                                        <?php } else { ?>
+                                            <input type="hidden" name="revieweeEmployeeIdNinthMonthReview"
+                                                value="<?php echo htmlspecialchars($employeeId); ?>" />
+                                            <input type="hidden" name="reviewerEmployeeId"
+                                                value="<?php echo htmlspecialchars($loginEmployeeId); ?>" />
+                                            <input type="hidden" name="reviewType" value="Ninth Month Review" />
+                                            <div class="mb-3">
+                                                <label for="reviewDate" class="form-label"><strong>Review Date:</strong></label>
+                                                <input type="date" class="form-control" id="reviewDate" name="reviewDate">
+                                            </div>
+                                            <div class="mb-3">
+                                                <label for="reviewNotes" class="form-label"><strong>Review
+                                                        Notes:</strong></label>
+                                                <textarea class="form-control" id="reviewNotes" name="reviewNotes"
+                                                    rows="4"></textarea>
+                                            </div>
+
+                                        <?php } ?>
+                                    </div>
+                                    <!-- Additional Modal Actions -->
+                                    <div class="modal-footer">
+                                        <button type="button" class="btn btn-secondary"
+                                            data-bs-dismiss="modal">Close</button>
+                                        <button type="submit" class="btn btn-dark">Submit Review</button>
+                                    </div>
+                                </form>
+                            </div>
+                        </div>
+                    </div>
                 </div>
             </div>
-        </div>
-        <?php
+            <?php
                 }
                 ?>
 
-    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
-    <script src="https://cdn.canvasjs.com/canvasjs.min.js"></script>
+        <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+        <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+        <script src="https://cdn.canvasjs.com/canvasjs.min.js"></script>
 
-    <script>
-        document.addEventListener('DOMContentLoaded', function () {
-            var myModalEl = document.getElementById('deleteConfirmationModal');
-            myModalEl.addEventListener('show.bs.modal', function (event) {
-                var button = event.relatedTarget; // Button that triggered the modal
-                var wageDate = button.getAttribute('data-wagedate'); // Extract info from data-* attributes
-                var wageAmount = button.getAttribute('data-wageamount');
+        <script>
+            document.addEventListener('DOMContentLoaded', function () {
+                var myModalEl = document.getElementById('deleteConfirmationModal');
+                myModalEl.addEventListener('show.bs.modal', function (event) {
+                    var button = event.relatedTarget; // Button that triggered the modal
+                    var wageDate = button.getAttribute('data-wagedate'); // Extract info from data-* attributes
+                    var wageAmount = button.getAttribute('data-wageamount');
 
-                // Update the modal's content with the extracted info
-                var modalWageDate = myModalEl.querySelector('#wageDate');
-                var modalWageAmount = myModalEl.querySelector('#wageAmount');
-                modalWageDate.textContent = wageDate;
-                modalWageAmount.textContent = wageAmount;
+                    // Update the modal's content with the extracted info
+                    var modalWageDate = myModalEl.querySelector('#wageDate');
+                    var modalWageAmount = myModalEl.querySelector('#wageAmount');
+                    modalWageDate.textContent = wageDate;
+                    modalWageAmount.textContent = wageAmount;
+                });
             });
-        });
-    </script>
+        </script>
 
-    <script>
-        document.addEventListener("DOMContentLoaded", function () {
-            // Initialize Bootstrap modal
-            var payRaiseHistoryModal = new bootstrap.Modal(document.getElementById('payRaiseHistoryModal'));
+        <script>
+            document.addEventListener("DOMContentLoaded", function () {
+                // Initialize Bootstrap modal
+                var payRaiseHistoryModal = new bootstrap.Modal(document.getElementById('payRaiseHistoryModal'));
 
-            // Pay Raise History edit icon click event
-            document.querySelector('#payRaiseEditIcon').addEventListener('click', function () {
-                // Show the pay raise history modal
-                payRaiseHistoryModal.show();
+                // Pay Raise History edit icon click event
+                document.querySelector('#payRaiseEditIcon').addEventListener('click', function () {
+                    // Show the pay raise history modal
+                    payRaiseHistoryModal.show();
+                });
             });
-        });
-    </script>
+        </script>
 
-    <script>
-        document.addEventListener("DOMContentLoaded", function () {
-            // Edit button click event handler
-            document.querySelectorAll('.edit-btn').forEach(function (btn) {
-                btn.addEventListener('click', function () {
-                    // Get the parent row
-                    var row = this.closest('tr');
+        <script>
+            document.addEventListener("DOMContentLoaded", function () {
+                // Edit button click event handler
+                document.querySelectorAll('.edit-btn').forEach(function (btn) {
+                    btn.addEventListener('click', function () {
+                        // Get the parent row
+                        var row = this.closest('tr');
 
-                    // Toggle edit mode
-                    row.classList.toggle('editing');
+                        // Toggle edit mode
+                        row.classList.toggle('editing');
 
-                    // Toggle visibility of view and edit elements
-                    row.querySelectorAll('.view-mode, .edit-mode').forEach(function (elem) {
-                        elem.classList.toggle('d-none');
+                        // Toggle visibility of view and edit elements
+                        row.querySelectorAll('.view-mode, .edit-mode').forEach(function (elem) {
+                            elem.classList.toggle('d-none');
+                        });
                     });
                 });
             });
-        });
-    </script>
+        </script>
 
-    <script>
-        const dropZone = document.getElementById('dropZone');
-        const fileInput = document.getElementById('fileInput');
-        const fileList = document.getElementById('fileList');
-        let selectedFiles = [];
+        <script>
+            const dropZone = document.getElementById('dropZone');
+            const fileInput = document.getElementById('fileInput');
+            const fileList = document.getElementById('fileList');
+            let selectedFiles = [];
 
-        dropZone.addEventListener('dragover', function (event) {
-            event.preventDefault();
-            dropZone.classList.add('bg-light');
-        });
+            dropZone.addEventListener('dragover', function (event) {
+                event.preventDefault();
+                dropZone.classList.add('bg-light');
+            });
 
-        dropZone.addEventListener('dragleave', function () {
-            dropZone.classList.remove('bg-light');
-        });
+            dropZone.addEventListener('dragleave', function () {
+                dropZone.classList.remove('bg-light');
+            });
 
-        dropZone.addEventListener('drop', function (event) {
-            event.preventDefault();
-            dropZone.classList.remove('bg-light');
-            const files = event.dataTransfer.files;
-            handleFiles(files);
-        });
+            dropZone.addEventListener('drop', function (event) {
+                event.preventDefault();
+                dropZone.classList.remove('bg-light');
+                const files = event.dataTransfer.files;
+                handleFiles(files);
+            });
 
-        fileInput.addEventListener('change', function (event) {
-            const files = event.target.files;
-            handleFiles(files);
-        });
+            fileInput.addEventListener('change', function (event) {
+                const files = event.target.files;
+                handleFiles(files);
+            });
 
-        function handleFiles(files) {
-            for (let i = 0; i < files.length; i++) {
-                addFile(files[i]);
+            function handleFiles(files) {
+                for (let i = 0; i < files.length; i++) {
+                    addFile(files[i]);
+                }
+                renderFileList();
             }
-            renderFileList();
-        }
 
-        function addFile(file) {
-            selectedFiles.push(file);
-        }
+            function addFile(file) {
+                selectedFiles.push(file);
+            }
 
-        function removeFile(index) {
-            selectedFiles.splice(index, 1);
-            renderFileList();
-        }
+            function removeFile(index) {
+                selectedFiles.splice(index, 1);
+                renderFileList();
+            }
 
-        function renderFileList() {
-            fileList.innerHTML = '';
-            selectedFiles.forEach((file, index) => {
-                const listItem = document.createElement('div');
-                listItem.className = 'd-flex justify-content-between align-items-center border p-2 mb-2';
-                listItem.innerHTML = `
+            function renderFileList() {
+                fileList.innerHTML = '';
+                selectedFiles.forEach((file, index) => {
+                    const listItem = document.createElement('div');
+                    listItem.className = 'd-flex justify-content-between align-items-center border p-2 mb-2';
+                    listItem.innerHTML = `
                     <span>${file.name}</span>
                     <button class="btn btn-danger btn-sm" onclick="removeFile(${index})">Remove</button>
                 `;
-                fileList.appendChild(listItem);
-            });
-        }
-
-        // Reset file input and selected files when the modal is closed
-        document.getElementById('addPoliciesModal').addEventListener('hidden.bs.modal', function () {
-            resetFileInput();
-        });
-
-        function resetFileInput() {
-            fileInput.value = ''; // Clear the file input
-            selectedFiles = []; // Clear the array of selected files
-            renderFileList(); // Clear the file list display
-        }
-    </script>
-
-    <script>
-        $(document).ready(function () {
-            // Event listener for modal close event
-            $('#payRaiseHistoryModal').on('hidden.bs.modal', function () {
-                // For each row in the table
-                $('#payRaiseHistoryModal tbody tr').each(function () {
-                    // Show view mode and hide edit mode
-                    $(this).find('.view-mode').removeClass('d-none');
-                    $(this).find('.edit-mode').addClass('d-none');
+                    fileList.appendChild(listItem);
                 });
-            });
-        });
-    </script>
-
-    <script>
-        function copyDirectoryPath(button) {
-            var directoryPathElement = button.parentElement.querySelector('small.text-break');
-            var textArea = document.createElement("textarea");
-
-            // Place the directory path text inside the textarea
-            textArea.textContent = directoryPathElement.textContent;
-
-            // Ensure textarea is non-visible
-            textArea.style.position = "fixed";
-            textArea.style.opacity = 0;
-
-            // Append the textarea to the document
-            document.body.appendChild(textArea);
-
-            // Select the text inside the textarea
-            textArea.select();
-
-            try {
-                // Execute the copy command
-                document.execCommand('copy');
-                console.log('Text copied successfully');
-
-                // Change button text to "Copied"
-                button.innerHTML = '<i class="fa-regular fa-check-circle text-success fa-xs"></i> <small class="text-success">Copied</small>';
-
-                // Reset button text after 2 seconds
-                setTimeout(function () {
-                    button.innerHTML = '<i class="fa-regular fa-copy text-primary fa-xs"></i> <small class="text-primary">Copy</small>';
-                }, 2000); // 2000 milliseconds = 2 seconds
-
-            } catch (err) {
-                console.error('Unable to copy text', err);
             }
 
-            // Remove the textarea from the document
-            document.body.removeChild(textArea);
-        }
+            // Reset file input and selected files when the modal is closed
+            document.getElementById('addPoliciesModal').addEventListener('hidden.bs.modal', function () {
+                resetFileInput();
+            });
 
-    </script>
+            function resetFileInput() {
+                fileInput.value = ''; // Clear the file input
+                selectedFiles = []; // Clear the array of selected files
+                renderFileList(); // Clear the file list display
+            }
+        </script>
 
-    <script>
-        // Enabling the tooltip
-        const tooltips = document.querySelectorAll('.tooltips');
-        tooltips.forEach(t => {
-            new bootstrap.Tooltip(t);
-        })
-    </script>
+        <script>
+            $(document).ready(function () {
+                // Event listener for modal close event
+                $('#payRaiseHistoryModal').on('hidden.bs.modal', function () {
+                    // For each row in the table
+                    $('#payRaiseHistoryModal tbody tr').each(function () {
+                        // Show view mode and hide edit mode
+                        $(this).find('.view-mode').removeClass('d-none');
+                        $(this).find('.edit-mode').addClass('d-none');
+                    });
+                });
+            });
+        </script>
+
+        <script>
+            function copyDirectoryPath(button) {
+                var directoryPathElement = button.parentElement.querySelector('small.text-break');
+                var textArea = document.createElement("textarea");
+
+                // Place the directory path text inside the textarea
+                textArea.textContent = directoryPathElement.textContent;
+
+                // Ensure textarea is non-visible
+                textArea.style.position = "fixed";
+                textArea.style.opacity = 0;
+
+                // Append the textarea to the document
+                document.body.appendChild(textArea);
+
+                // Select the text inside the textarea
+                textArea.select();
+
+                try {
+                    // Execute the copy command
+                    document.execCommand('copy');
+                    console.log('Text copied successfully');
+
+                    // Change button text to "Copied"
+                    button.innerHTML = '<i class="fa-regular fa-check-circle text-success fa-xs"></i> <small class="text-success">Copied</small>';
+
+                    // Reset button text after 2 seconds
+                    setTimeout(function () {
+                        button.innerHTML = '<i class="fa-regular fa-copy text-primary fa-xs"></i> <small class="text-primary">Copy</small>';
+                    }, 2000); // 2000 milliseconds = 2 seconds
+
+                } catch (err) {
+                    console.error('Unable to copy text', err);
+                }
+
+                // Remove the textarea from the document
+                document.body.removeChild(textArea);
+            }
+
+        </script>
+
+        <script>
+            // Enabling the tooltip
+            const tooltips = document.querySelectorAll('.tooltips');
+            tooltips.forEach(t => {
+                new bootstrap.Tooltip(t);
+            })
+        </script>
+
+        <script>
+            $(document).ready(function () {
+                // Department and section options mapping
+                var departmentSections = {
+                    'Electrical': ['Panel', 'Roof'],
+                    'Sheet Metal': ['Programmer', 'Painter'],
+                    'Office': ['Engineer', 'Accountant']
+                };
+
+                // Function to update section options based on department selection
+                $('#department').change(function () {
+                    var selectedDepartment = $(this).val();
+                    var sections = departmentSections[selectedDepartment] || [];
+                    var sectionSelect = $('#section');
+
+                    // Clear previous options
+                    sectionSelect.empty();
+
+                    // Populate section options
+                    sections.forEach(function (section) {
+                        sectionSelect.append($('<option></option>').text(section));
+                    });
+
+                    // Show the section field if a department is selected
+                    $('#sectionField').show();
+                });
+
+                // Trigger change event on page load if department is pre-selected
+                $('#department').trigger('change');
+            });
+        </script>
+
+        <script>
+            window.onload = function () {
+
+                var chart = new CanvasJS.Chart("chartContainer", {
+                    animationEnabled: true,
+                    axisX: {
+                        titleFontFamily: "Avenir", // Set the font family for X axis title
+                        titleFontSize: 14, // Set the font size for X axis title
+                        titleFontWeight: "bold", // Set the font weight for X axis title
+                        titleFontColor: "#555", // Set the font color for X axis title
+                        labelFontFamily: "Avenir", // Set the font family for X axis labels
+                        labelFontSize: 12, // Set the font size for X axis labels
+                        labelFontColor: "#555" // Set the font color for X axis labels
+                    },
+                    data: [{
+                        type: "line",
+                        color: "#043f9d", // Set line color
+                        markerColor: "#043f9d", // Set marker color
+                        markerSize: 8, // Set marker size
+                        dataPoints: <?php echo json_encode($dataPoints, JSON_NUMERIC_CHECK); ?>
+                    }]
+                });
+                chart.render();
+            }
+        </script>
+        <script>
+            // Restore scroll position after page reload
+            window.addEventListener('load', function () {
+                const scrollPosition = sessionStorage.getItem('scrollPosition');
+                if (scrollPosition) {
+                    window.scrollTo(0, scrollPosition);
+                    sessionStorage.removeItem('scrollPosition'); // Remove after restoring
+                }
+            });
+
+        </script>
 </body>
 
 </html>

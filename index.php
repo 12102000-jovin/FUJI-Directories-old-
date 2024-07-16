@@ -5,8 +5,9 @@ ini_set('display_startup_errors', '1');
 error_reporting(E_ALL);
 
 // Connect to the database
-require_once("db_connect.php");
-require_once("status_check.php");
+require_once ("db_connect.php");
+require_once ("status_check.php");
+
 ?>
 
 <!DOCTYPE html>
@@ -51,11 +52,11 @@ require_once("status_check.php");
     <div class="container-fluid">
         <div class="row">
             <div class="col-auto p-0 sidebar">
-                <?php require_once("Menu/SideMenu.php"); ?>
+                <?php require_once ("Menu/SideMenu.php"); ?>
             </div>
             <div class="col p-0">
                 <div class="sticky-top-menu">
-                    <?php require_once("Menu/TopMenu.php") ?>
+                    <?php require_once ("Menu/TopMenu.php") ?>
                 </div>
                 <div class="p-4">
                     <?php
@@ -63,35 +64,37 @@ require_once("status_check.php");
                     if (isset($_GET['menu'])) {
                         switch ($_GET['menu']) {
                             case 'home':
-                                require_once("Pages/home-index.php");
+                                require_once ("Pages/home-index.php");
                                 break;
                             case 'hr':
-                                require_once("Pages/hr-index.php");
+                                require_once ("Pages/hr-index.php");
                                 break;
                             case 'qa':
-                                require_once("Pages/qa-index.php");
+                                echo '<script type="text/javascript">';
+                                echo 'window.location.href = "Pages/qa-index.php";';      // Redirects to the current page to prevent loading other content
+                                echo '</script>';
                                 break;
                             default:
-                                require_once("Pages/home-index.php");
+                                require_once ("Pages/home-index.php");
                         }
                     } else if (isset($_GET['page'])) {
                         switch ($_GET['page']) {
                             case 'manageUsers':
-                                require_once("Pages/ManageUsers.php");
+                                require_once ("Pages/ManageUsers.php");
                                 break;
                             case 'manageGroups':
-                                require_once("Pages/ManageGroups.php");
+                                require_once ("Pages/ManageGroups.php");
                                 break;
                             case 'manageFolders':
-                                require_once("Pages/ManageFolders.php");
+                                require_once ("Pages/ManageFolders.php");
                                 break;
                             default:
                                 // Default to HR index if no or invalid menu is selected
-                                require_once("Pages/home-index.php");
+                                require_once ("Pages/home-index.php");
                         }
                     } else {
                         // Default to HR index if no menu is selected
-                        require_once("Pages/home-index.php");
+                        require_once ("Pages/home-index.php");
                     }
 
                     ?>
@@ -100,7 +103,7 @@ require_once("status_check.php");
             </div>
         </div>
     </div>
-    <?php require_once("logout.php"); ?>
+    <?php require_once ("logout.php"); ?>
 </body>
 
 </html>

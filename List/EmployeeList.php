@@ -3,7 +3,6 @@ ini_set('display_errors', '1');
 ini_set('display_startup_errors', '1');
 error_reporting(E_ALL);
 
-
 require_once ("./db_connect.php");
 
 // Default query to fetch all employees
@@ -35,7 +34,7 @@ if ($employee_list_result->num_rows > 0) {
         .card {
             height: 100%;
         }
-
+ 
         .nav-pills .nav-link.active,
         .nav-pills .show>.nav-link {
             background-color: #eef3f9 !important;
@@ -67,7 +66,8 @@ if ($employee_list_result->num_rows > 0) {
                         <button class="nav-link text-dark rounded-0" id="inactive-employees-tab" data-bs-toggle="pill"
                             data-bs-target="#inactive-employees" type="button" role="tab"
                             aria-controls="inactive-employees" aria-selected="false"><small>Inactive
-                                Employees</small></button>
+                                Employees</small>
+                        </button>
                     </li>
                 </ul>
             </div>
@@ -107,23 +107,7 @@ if ($employee_list_result->num_rows > 0) {
                                 </li>
                             </ul>
                         </div>
-                        <div class="dropdown ms-1">
-                            <button class="btn dropdown-toggle" data-bs-toggle="dropdown" aria-expanded="false"
-                                style="color:#043f9d; border: 1px solid #043f9d">
-                                <small class="ms-1 text-nowrap fw-bold">Entries per Page</small>
-                            </button>
-                            <ul class="dropdown-menu" aria-labelledby="dropdownMenuButton">
-                                <li>
-                                    <a class="dropdown-item"> 10 </a>
-                                </li>
-                                <li>
-                                    <a class="dropdown-item"> 24 </a>
-                                </li>
-                                <li>
-                                    <a class="dropdown-item"> 48 </a>
-                                </li>
-                            </ul>
-                        </div>
+            
                     </div>
                 </div>
             </div>
@@ -197,6 +181,14 @@ if ($employee_list_result->num_rows > 0) {
                         </div>
                     <?php } ?>
                 </div>
+                <div class="d-flex justify-content-center mt-3">
+                    <button class="btn btn-outline-primary see-more-button"
+                        style="border: 1px solid #043f9d; color: #043f9d;"
+                        onmouseover="this.style.backgroundColor='#043f9d'; this.style.color='white';"
+                        onmouseout="this.style.backgroundColor='transparent'; this.style.color='#043f9d';"
+                        onclick="loadMoreEmployees('all-employees', 8)">Load
+                        More</button>
+                </div>
             </div>
 
             <!-- Additional tab panes for active and inactive employees -->
@@ -251,6 +243,13 @@ if ($employee_list_result->num_rows > 0) {
                         <?php }
                     } ?>
                 </div>
+                <div class="d-flex justify-content-center mt-3">
+                    <button class="btn btn-outline-primary see-more-button"
+                        style="border: 1px solid #043f9d; color: #043f9d;"
+                        onmouseover="this.style.backgroundColor='#043f9d'; this.style.color='white';"
+                        onmouseout="this.style.backgroundColor='transparent'; this.style.color='#043f9d';"
+                        onclick="loadMoreEmployees('active-employees', 8)">Load More</button>
+                </div>
             </div>
 
             <div class="tab-pane fade" id="inactive-employees" role="tabpanel" aria-labelledby="inactive-employees-tab">
@@ -304,11 +303,20 @@ if ($employee_list_result->num_rows > 0) {
                         <?php }
                     } ?>
                 </div>
+                <div class="d-flex justify-content-center mt-3">
+                    <button class="btn btn-outline-primary see-more-button"
+                        style="border: 1px solid #043f9d; color: #043f9d;"
+                        onmouseover="this.style.backgroundColor='#043f9d'; this.style.color='white';"
+                        onmouseout="this.style.backgroundColor='transparent'; this.style.color='#043f9d';"
+                        onclick="loadMoreEmployees('inactive-employees', 8)">
+                        Load More
+                    </button>
+                </div>
             </div>
         </div>
     </div>
-
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    
     <script>
         // Function to sort employees by name
         function sortByName(order) {
@@ -349,6 +357,7 @@ if ($employee_list_result->num_rows > 0) {
             cards.forEach(card => cardsContainer.appendChild(card));
         }
 
+        // Function to filter employees based on search term
         function filterEmployees(searchTerm) {
             const cards = document.querySelectorAll('.employee-card');
 
@@ -362,7 +371,83 @@ if ($employee_list_result->num_rows > 0) {
                     card.style.display = 'none'; // Hide the card
                 }
             });
+
+            // Reinitialize to show only 8 employees when search term is cleared
+            if (searchTerm === '') {
+                initializeEmployees('all-employees', 8);
+                initializeEmployees('active-employees', 8);
+                initializeEmployees('inactive-employees', 8);
+            } else if (searchTerm !== '') {
+                hideLoadMoreButton();
+            }
         }
+    </script>
+
+    <script>
+        // Function to initialize and show employees based on current tab
+        function initializeEmployees(tabId, numToShow) {
+            const tabContent = document.getElementById(tabId);
+            const employeeCards = tabContent.querySelectorAll('.employee-card');
+            let count = 0;
+
+            // Loop through each employee card in the current tab
+            employeeCards.forEach((card, index) => {
+                if (index < numToShow && card.style.display !== 'none') {
+                    card.style.display = 'block'; // Show the card
+                    count++;
+                } else {
+                    card.style.display = 'none'; // Hide the card
+                }
+            });
+
+            // Show or hide "See More" button based on remaining employees
+            const seeMoreButton = tabContent.querySelector('.see-more-button');
+            if (count < employeeCards.length) {
+                seeMoreButton.style.display = 'block'; // Show the button if there are more employees to show
+            } else {
+                seeMoreButton.style.display = 'none'; // Hide the button if all employees are shown
+            }
+        }
+
+        // Function to load more employees when "See More" button is clicked
+        function loadMoreEmployees(tabId, numToLoad) {
+            const tabContent = document.getElementById(tabId);
+            const employeeCards = tabContent.querySelectorAll('.employee-card');
+            let numShown = 0;
+
+            // Count currently shown employees
+            employeeCards.forEach(card => {
+                if (card.style.display !== 'none') {
+                    numShown++;
+                }
+            });
+
+            // Show additional employees
+            for (let i = numShown; i < numShown + numToLoad && i < employeeCards.length; i++) {
+                employeeCards[i].style.display = 'block';
+            }
+
+            // Update "See More" button visibility
+            const seeMoreButton = tabContent.querySelector('.see-more-button');
+            if (numShown + numToLoad >= employeeCards.length) {
+                seeMoreButton.style.display = 'none'; // Hide the button if all employees are shown
+            }
+        }
+
+        // Function to hide "Load More" button
+        function hideLoadMoreButton() {
+            const seeMoreButton = document.querySelectorAll('.see-more-button');
+            seeMoreButton.forEach(button => {
+                button.style.display = 'none';
+            });
+        }
+
+        // Initial setup to show 8 employees on each tab
+        document.addEventListener('DOMContentLoaded', function () {
+            initializeEmployees('all-employees', 8);
+            initializeEmployees('active-employees', 8);
+            initializeEmployees('inactive-employees', 8);
+        });
     </script>
 
     <script>

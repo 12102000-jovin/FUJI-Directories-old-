@@ -37,7 +37,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $_SESSION['logged_in'] = true;
 
             // Query to get user's role 
-            $stmt_employee_id = $conn->prepare("SELECT employee_id FROM users WHERE BINARY users.username = ?");
+            $stmt_employee_id = $conn->prepare("SELECT employee_id, role FROM users WHERE BINARY users.username = ?");
             $stmt_employee_id->bind_param("s", $username);
             $stmt_employee_id->execute();
 
@@ -46,6 +46,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             if ($result_employee_id->num_rows > 0) {
                 $employee_id = $result_employee_id->fetch_assoc();
                 $_SESSION['employee_id'] = $employee_id['employee_id'];
+                $_SESSION['role'] = $employee_id['role'];
             }
 
             header("Location: index.php");

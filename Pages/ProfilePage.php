@@ -425,7 +425,7 @@ if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST["revieweeEmployeeIdNin
 //  ========================= O P E N  F O L D E R  (P A Y  R E V I E W) ========================= 
 if ($_SERVER["REQUEST_METHOD"] === "POST") {
     if (isset($_POST["payReviewFolder"])) {
-        $directory = "../../../../../../Applications/Employees/$employeeId/Pay Review/111 - Pay Review";
+        $directory = "../../../../../../Applications/Employees/$employeeId/Pay Review";
     } else if (isset($_POST["annualLeaveFolder"])) {
         $directory = "../../../../../../Applications/Employees/$employeeId/Annual Leave";
     } else if (isset($_POST["policiesFolder"])) {

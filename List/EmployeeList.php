@@ -34,7 +34,7 @@ if ($employee_list_result->num_rows > 0) {
         .card {
             height: 100%;
         }
- 
+        
         .nav-pills .nav-link.active,
         .nav-pills .show>.nav-link {
             background-color: #eef3f9 !important;

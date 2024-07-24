@@ -3,14 +3,16 @@ ini_set('display_errors', '1');
 ini_set('display_startup_errors', '1');
 error_reporting(E_ALL);
 
-
-
 // Connect to the database
 require_once ("../db_connect.php");
 require_once ("../status_check.php");
 
 // Get role from session
 $role = $_SESSION["role"];
+
+// Sorting Variables
+$sort = isset($_GET['sort']) ? $_GET['sort'] : 'qa_document';
+$order = isset($_GET['order']) ? $_GET['order'] : 'asc';
 
 // Pagination
 $records_per_page = isset($_GET["recordsPerPage"]) ? intval($_GET["recordsPerPage"]) : 5; // Number of records per page
@@ -20,20 +22,20 @@ $offset = ($page - 1) * $records_per_page; // Offset for SQL query
 // Get search term
 $searchTerm = isset($_GET['search']) ? $conn->real_escape_string($_GET['search']) : '';
 
-
 // SQL Query to retrieve QA details with LIMIT for pagination
-$qa_sql = "SELECT * FROM quality_assurance WHERE 
-    qa_document LIKE '%$searchTerm%' OR 
-    document_name LIKE '%$searchTerm%' OR 
+$qa_sql = "SELECT * FROM quality_assurance WHERE
+    qa_document LIKE '%$searchTerm%' OR
+    document_name LIKE '%$searchTerm%' OR
     document_description LIKE '%$searchTerm%' OR
     department LIKE '%$searchTerm%'
+    ORDER BY $sort $order
     LIMIT $offset, $records_per_page";
 $qa_result = $conn->query($qa_sql);
 
 // Get total number of records
-$total_records_sql = "SELECT COUNT(*) AS total FROM quality_assurance WHERE 
-    qa_document LIKE '%$searchTerm%' OR 
-    document_name LIKE '%$searchTerm%' OR 
+$total_records_sql = "SELECT COUNT(*) AS total FROM quality_assurance WHERE
+    qa_document LIKE '%$searchTerm%' OR
+    document_name LIKE '%$searchTerm%' OR
     document_description LIKE '%$searchTerm%' OR
     department LIKE '%$searchTerm%'
     ";
@@ -41,7 +43,7 @@ $total_records_result = $conn->query($total_records_sql);
 $total_records = $total_records_result->fetch_assoc()['total'];
 $total_pages = ceil($total_records / $records_per_page);
 
-//  ========================= O P E N  (Q A)  D O C U M E N T ========================= 
+//  ========================= O P E N  (Q A)  D O C U M E N T [PDF] ========================= 
 if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST["qa_document"])) {
     $qaDocument = $_POST["qa_document"];
 
@@ -50,39 +52,85 @@ if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST["qa_document"])) {
     // Escape the directory path for security
     $escaped_directory = escapeshellarg($directory);
 
-    // Construct the shell command
-    $command = "open {$escaped_directory}";
+    // Determine the operating system
+    $os = strtoupper(substr(PHP_OS, 0, 3));
 
-    // Execute the shell command
-    $output = shell_exec($command);
+    if ($os === 'WIN') {
+        // Windows Command Shell
+        $command = "start \"\" " . $escaped_directory;
+    } else if ($os === "DAR") {
+        // macOS Shell Command
+        $command = "open {$escaped_directory}";
+    } else {
+        // Unix-based command (Linux)
+        $command = "xdg-open " . $escaped_directory;
+    }
+
+    // Execute the shell command and capture output and return status
+    $output = [];
+    $return_var = 0;
+    exec($command . ' 2>&1', $output, $return_var);
+
+    // Check if the command was executed successfully
+    if ($return_var !== 0) {
+        // Build the current URL with query parameters
+        $current_url = $_SERVER['PHP_SELF'];
+        if (!empty($_SERVER['QUERY_STRING'])) {
+            $current_url .= '?' . $_SERVER['QUERY_STRING'];
+        }
+    
+        // Output JavaScript to show alert and reload the page with parameters
+        echo "<script>
+                alert('Failed to open the document.');
+                window.location.href = '" . $current_url . "';
+              </script>";
+        exit();
+    }    
 }
 
-if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST["testWord"])) {
-
-    $directory = "../../../../../Employees/TestWordFile.docx";
+// =========================  O P E N  (Q A)  D O C U M E N T [DOC] =========================
+if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST["wip_document"])) {
+    $wipDocument = $_POST["wip_document"];
+    $directory = "../../../../../QA/$wipDocument.docx";
 
     // Escape the directory path for security
     $escaped_directory = escapeshellarg($directory);
 
-    // Construct the shell command
-    $command = "open {$escaped_directory}";
+    // Determine the operating system
+    $os = strtoupper(substr(PHP_OS, 0, 3));
 
-    // Execute the shell command
-    $output = shell_exec($command);
-}
+    // Construct the command based on the OS
+    if ($os === "WIN") {
+        // Windows Command Shell
+        $command = "start \"\" " . $escaped_directory;
+    } elseif ($os === "DAR") {
+        // macOS Shell Command
+        $command = "open " . $escaped_directory;
+    } else {
+        // Unix-based command (Linux)
+        $command = "xdg-open " . $escaped_directory;
+    }
 
-if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST["testExcel"])) {
+    // Execute the shell command and capture output and return status
+    $output = [];
+    $return_var = 0;
+    exec($command . ' 2>&1', $output, $return_var);
 
-    $directory = "../../../../../Employees/TestExcelFile.xlsx";
-
-    // Escape the directory path for security
-    $escaped_directory = escapeshellarg($directory);
-
-    // Construct the shell command
-    $command = "open {$escaped_directory}";
-
-    // Execute the shell command
-    $output = shell_exec($command);
+    // Check if the command was executed successfully
+    if ($return_var !== 0) {
+        // Build the current URL with query parameters
+        $current_url = $_SERVER['PHP_SELF'];
+        if (!empty($_SERVER['QUERY_STRING'])) {
+            $current_url .= '?' . $_SERVER['QUERY_STRING'];
+        }
+    
+        // Output JavaScript to show alert and reload the page with parameters
+        echo "<script>
+                alert('Failed to open the document.');
+                window.location.href = '" . $current_url . "';
+              </script>";
+        exit();
+    }    
 }
 
 // ========================= A D D   D O C U M E N T =========================
@@ -101,22 +149,27 @@ if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST["addDocument"])) {
     $revisionStatus = $_POST["revisionStatus"];
     $ISO9001 = $_POST["iso9001"];
 
-    // echo $qaDocument . $documentName . $documentDescription .
-    //     $revNo . $wipDocLink . $department . $type . $owner . $status . $approvedBy . $lastUpdated . $revisionStatus . $ISO9001;
-
     $add_document_sql = "INSERT INTO quality_assurance (qa_document, document_name, document_description, rev_no, wip_doc_link, department, type, owner, status, approved_by, last_updated, revision_status, iso_9001) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
     $add_document_result = $conn->prepare($add_document_sql);
     $add_document_result->bind_param("ssssssssssssi", $qaDocument, $documentName, $documentDescription, $revNo, $wipDocLink, $department, $type, $owner, $status, $approvedBy, $lastUpdated, $revisionStatus, $ISO9001);
 
     // Execute the prepared statement
     if ($add_document_result->execute()) {
-        header("Location: " . $_SERVER['PHP_SELF']);
+        // Build the current URL with query parameters
+        $current_url = $_SERVER['PHP_SELF'];
+        if (!empty($_SERVER['QUERY_STRING'])) {
+            $current_url .= '?' . $_SERVER['QUERY_STRING'];
+        }
+        // Redirect to the same URL with parameters
+        header("Location: " . $current_url);
         exit();
     } else {
-        echo "Error: " . $add_document_result . "<br>" . $conn->error;
+        // Improved error reporting
+        echo "Error updating record: " . $conn->error;
     }
     $add_document_result->close();
 }
+
 
 // ========================= D E L E T E  D O C U M E N T =========================
 if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST["qaIdToDelete"])) {
@@ -127,8 +180,13 @@ if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST["qaIdToDelete"])) {
     $delete_document_result->bind_param("i", $qaIdToDelete);
 
     if ($delete_document_result->execute()) {
-        header("Location: " . $_SERVER['PHP_SELF']);
+        $current_url = $_SERVER['PHP_SELF'];
+        if (!empty($_SERVER['QUERY_STRING'])) {
+            $current_url .= '?' . $_SERVER['QUERY_STRING'];
+        }
+        header("Location: " . $current_url);
         exit();
+
     } else {
         echo "Error: " . $delete_document_result . "<br>" . $conn->error;
     }
@@ -178,11 +236,19 @@ if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST["qaIdToEdit"])) {
     );
 
     if ($edit_document_result->execute()) {
-        header("Location: " . $_SERVER['PHP_SELF']);
+        // Build the current URL with query parameters
+        $current_url = $_SERVER['PHP_SELF'];
+        if (!empty($_SERVER['QUERY_STRING'])) {
+            $current_url .= '?' . $_SERVER['QUERY_STRING'];
+        }
+
+        // Redirect to the same URL with parameters
+        header("Location: " . $current_url);
         exit();
     } else {
         echo "Error updating record: " . $edit_document_result->error;
     }
+
 }
 ?>
 
@@ -252,27 +318,82 @@ if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST["qaIdToEdit"])) {
         .pagination .page-link {
             color: black
         }
+
+        .table-container {
+            width: 100%;
+            height: 100%;
+        }
+
+        .modal-backdrop.show {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.5);
+            z-index: 1040;
+        }
+    </style>
+
+    <style>
+        #loading-indicator {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.5);
+            color: #fff;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-direction: column;
+            z-index: 9999;
+        }
+
+        .spinner {
+            border: 16px solid #f3f3f3;
+            border-top: 16px solid #3498db;
+            border-radius: 50%;
+            width: 120px;
+            height: 120px;
+            animation: spin 2s linear infinite;
+        }
+
+        @keyframes spin {
+            0% {
+                transform: rotate(0deg);
+            }
+
+            100% {
+                transform: rotate(360deg);
+            }
+        }
     </style>
 </head>
 
 <body class="background-color">
     <?php require_once ("../Menu/QAStaticTopMenu.php"); ?>
     <div class="container-fluid px-md-5 mb-5 mt-4">
-        <nav aria-label="breadcrumb">
-            <ol class="breadcrumb">
-                <li class="breadcrumb-item"><a href="http://localhost/FUJI-Directories/index.php">Home</a></li>
-                <li class="breadcrumb-item active fw-bold" style="color:#043f9d" aria-current="page">QA</li>
-            </ol>
-        </nav>
-        <!-- <form method="POST">
-            <input type="hidden" name="testWord">
-            <button class="btn btn-dark mb-5">Open Test Word Document</button>
-        </form>
+        <div class="d-flex justify-content-between align-items-center">
+            <nav aria-label="breadcrumb">
+                <ol class="breadcrumb">
 
-        <form method="POST">
-            <input type="hidden" name="testExcel">
-            <button class="btn btn-dark mb-5">Open Test Excel Document</button>
-        </form> -->
+                    <li class="breadcrumb-item"><a href="http://localhost/FUJI-Directories/index.php">Home</a></li>
+                    <li class="breadcrumb-item active fw-bold" style="color:#043f9d" aria-current="page">QA</li>
+                </ol>
+            </nav>
+            <div class="d-flex justify-content-end mb-3">
+                <div class="btn-group shadow-lg" role="group" aria-label="Zoom Controls">
+                    <button class="btn btn-sm btn-light" style="cursor:pointer" onclick="zoom(0.8)"><i
+                            class="fa-solid fa-magnifying-glass-minus"></i></button>
+                    <button class="btn btn-sm btn-light" style="cursor:pointer" onclick="zoom(1.2)"><i
+                            class="fa-solid fa-magnifying-glass-plus"></i></button>
+                    <button class="btn btn-sm btn-danger" style="cursor:pointer" onclick="resetZoom()"><small
+                            class="fw-bold">Reset</small></button>
+                </div>
+            </div>
+        </div>
         <div class="row mb-3">
             <div class="d-flex justify-content-between align-items-center">
                 <div class="col-md-5">
@@ -293,77 +414,142 @@ if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST["qaIdToEdit"])) {
                                 </button>
                                 <ul class="dropdown-menu" aria-labelledby="departmentDropdownMenuButton">
                                     <li><a class="dropdown-item" href="#"
-                                            onclick="updateSearchQuery('Electrical')">Electrical</a>
-                                    </li>
-                                    <li><a class="dropdown-item" href="#"
-                                            onclick="updateSearchQuery('Quality Assurance')">Quality Assurance</a>
-                                    </li>
-                                    <li><a class="dropdown-item" href="#"
-                                            onclick="updateSearchQuery('Management')">Management</a>
-                                    </li>
-                                    <li><a class="dropdown-item" href="#"
-                                            onclick="updateSearchQuery('Estimating')">Estimating</a>
-                                    </li>
-                                    <li><a class="dropdown-item" href="#"
                                             onclick="updateSearchQuery('Accounts')">Accounts</a>
                                     </li>
                                     <li><a class="dropdown-item" href="#"
                                             onclick="updateSearchQuery('Engineering')">Engineering</a>
                                     </li>
                                     <li><a class="dropdown-item" href="#"
-                                            onclick="updateSearchQuery('Sheet Metal')">Sheet Metal</a>
+                                            onclick="updateSearchQuery('Estimating')">Estimating</a>
+                                    </li>
+                                    <li><a class="dropdown-item" href="#"
+                                            onclick="updateSearchQuery('Electrical')">Electrical</a>
+                                    </li>
+                                    <li><a class="dropdown-item" href="#"
+                                            onclick="updateSearchQuery('Human Resources')">Human Resources</a>
+                                    </li>
+                                    <li><a class="dropdown-item" href="#"
+                                            onclick="updateSearchQuery('Management')">Management</a>
                                     </li>
                                     <li><a class="dropdown-item" href="#"
                                             onclick="updateSearchQuery('Operations Support')">Operations Support</a>
                                     </li>
                                     <li><a class="dropdown-item" href="#"
-                                            onclick="updateSearchQuery('Human Resources')">Human Resources</a>
+                                            onclick="updateSearchQuery('Quality Assurance')">Quality Assurance</a>
+                                    </li>
+                                    <li><a class="dropdown-item" href="#"
+                                            onclick="updateSearchQuery('Quality Control')">Quality Control</a>
                                     </li>
                                     <li><a class="dropdown-item" href="#"
                                             onclick="updateSearchQuery('Research & Development')">Research &
                                             Development</a>
                                     </li>
                                     <li><a class="dropdown-item" href="#"
-                                            onclick="updateSearchQuery('Work, Health and Safety')">Work, Health and
-                                            Safety</a>
-                                    </li>
-                                    <li><a class="dropdown-item" href="#"
-                                            onclick="updateSearchQuery('Quality Control')">Quality Control</a>
+                                            onclick="updateSearchQuery('Sheet Metal')">Sheet Metal</a>
                                     </li>
                                     <li><a class="dropdown-item" href="#"
                                             onclick="updateSearchQuery('Special Projects')">Special Projects</a>
+                                    </li>
+                                    <li><a class="dropdown-item" href="#"
+                                            onclick="updateSearchQuery('Work, Health and Safety')">Work, Health and
+                                            Safety</a>
                                     </li>
                                 </ul>
                             </div>
                         </div>
                     </form>
                 </div>
+
                 <div class="d-flex justify-content-end align-items-center col-md-2">
                     <button class="btn btn-dark" data-bs-toggle="modal" data-bs-target="#addDocumentModal"> <i
                             class="fa-solid fa-plus"></i> Add Document</button>
                 </div>
             </div>
         </div>
-
         <div class="table-responsive rounded-3 shadow-lg bg-light m-0">
-            <table class="table table-hover  mb-0 pb-0">
+            <table class="table table-hover mb-0 pb-0">
                 <thead>
                     <tr class="text-center">
                         <th></th>
-                        <th class="py-4 align-middle">QA Document</th>
-                        <th class="py-4 align-middle">Document Name</th>
-                        <th class="py-4 align-middle">Document Description</th>
+                        <th class="py-4 align-middle" style="min-width:200px">
+                            <a onclick="updateSort('qa_document', '<?= $order == 'asc' ? 'desc' : 'asc' ?>')"
+                                class="text-decoration-none text-white" style="cursor: pointer;">
+                                QA Document <i class="fa-solid fa-sort fa-md ms-1"></i>
+                            </a>
+                        </th>
+                        <th class="py-4 align-middle" style="min-width:200px">
+                            <a onclick="updateSort('document_name', '<?= $order == 'asc' ? 'desc' : 'asc' ?>')"
+                                class="text-decoration-none text-white" style="cursor: pointer;">
+                                Document Name<i class="fa-solid fa-sort fa-md ms-1"></i>
+                            </a>
+                        </th>
+                        <th class="py-4 align-middle" style="min-width:400px">
+                            <a onclick="updateSort('document_description', '<?= $order == 'asc' ? 'desc' : 'asc' ?>')"
+                                class="text-decoration-none text-white" style="cursor: pointer;">
+                                Document Description <i class="fa-solid fa-sort fa-md ms-1"></i>
+                            </a>
+                        </th>
                         <?php if ($role === "admin") { ?>
-                            <th class="py-4 align-middle">Rev No.</th>
-                            <th class="py-4 align-middle">WIP Doc Link</th>
-                            <th class="py-4 align-middle">Department</th>
-                            <th class="py-4 align-middle">Type</th>
-                            <th class="py-4 align-middle">Owner</th>
-                            <th class="py-4 align-middle">Status</th>
-                            <th class="py-4 align-middle">Approved By</th>
-                            <th class="py-4 align-middle">Last Updated</th>
-                            <th class="py-4 align-middle">Revision Status</th>
-                            <th class="py-4 align-middle">ISO 9001</th>
+                            <th class="py-4 align-middle" style="min-width:100px">
+                                <a onclick="updateSort('rev_no','<?= $order == 'asc' ? 'desc' : 'asc' ?>')"
+                                    class="text-decoration-none text-white" style="cursor: pointer;">
+                                    Rev No. <i class="fa-solid fa-sort fa-md ms-1"></i>
+                                </a>
+                            </th>
+                            <th class="py-4 align-middle" style="min-width:200px">
+                                <a onclick="updateSort('wip_doc_link', '<?= $order == 'asc' ? 'desc' : 'asc' ?>')"
+                                    class="text-decoration-none text-white" style="cursor: pointer;">
+                                    WIP Doc Link <i class="fa-solid fa-sort fa-md ms-1"></i>
+                                </a>
+                            </th>
+                            <th class="py-4 align-middle" style="min-width:200px">
+                                <a onclick="updateSort('department', '<?= $order == 'asc' ? 'desc' : 'asc' ?>')"
+                                    class="text-decoration-none text-white" style="cursor: pointer;">
+                                    Department<i class="fa-solid fa-sort fa-md ms-1"></i>
+                                </a>
+                            </th>
+                            <th class="py-4 align-middle">
+                                <a onclick="updateSort('Type', '<?= $order == 'asc' ? 'desc' : 'asc' ?>')"
+                                    class="text-decoration-none text-white" style="cursor: pointer;">
+                                    Type<i class="fa-solid fa-sort fa-md ms-1"></i>
+                                </a>
+                            </th>
+                            <th class="py-4 align-middle">
+                                <a onclick="updateSort('Owner', '<?= $order == 'asc' ? 'desc' : 'asc' ?>')"
+                                    class="text-decoration-none text-white" style="cursor:pointer">
+                                    Owner<i class="fa-solid fa-sort fa-md ms-1"></i>
+                                </a>
+                            </th>
+                            <th class="py-4 align-middle">
+                                <a onclick="updateSort('Status','<?= $order == 'asc' ? 'desc' : 'asc' ?>')"
+                                    class="text-decoration-none text-white" style="cursor:pointer">
+                                    Status<i class="fa-solid fa-sort fa-md ms-1"></i>
+                                </a>
+                            </th>
+                            <th class="py-4 align-middle" style="min-width:200px">
+                                <a onclick="updateSort('approved_by', '<?= $order == 'asc' ? 'desc' : 'asc' ?>')"
+                                    class="text-decoration-none text-white" style="cursor:pointer">
+                                    Approved By<i class="fa-solid fa-sort fa-md ms-1"></i>
+                                </a>
+                            </th>
+                            <th class="py-4 align-middle" style="min-width:200px">
+                                <a onclick="updateSort('last_updated', '<?= $order == 'asc' ? 'desc' : 'asc' ?>')"
+                                    class="text-decoration-none text-white" style="cursor:pointer">
+                                    Last Updated <i class="fa-solid fa-sort fa-md ms-1"></i>
+                                </a>
+                            </th>
+                            <th class="py-4 align-middle">
+                                <a onclick="updateSort('revision_status', '<?= $order == 'asc' ? 'desc' : 'asc' ?>')"
+                                    class="text-decoration-none text-white" style="cursor:pointer">
+                                    Revision Status <i class="fa-solid fa-sort fa-md ms-1"></i>
+                                </a>
+                            </th>
+                            <th class="py-4 align-middle" style="min-width:120px">
+                                <a onclick="updateSort('iso_9001', '<?= $order == 'asc' ? 'desc' : 'asc' ?>')"
+                                    class="text-decoration-none text-white" style="cursor:pointer">
+                                    ISO 9001 <i class="fa-solid fa-sort fa-md ms-1"></i>
+                                </a>
+                            </th>
                         <?php } ?>
                     </tr>
                 </thead>
@@ -392,7 +578,7 @@ if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST["qaIdToEdit"])) {
                                     </div>
                                 </td>
                                 <td class="py-2 align-middle text-center document-title">
-                                    <form method="POST">
+                                    <form class="document-form" method="POST">
                                         <input type="hidden" value=<?= $row['qa_document'] ?> name="qa_document">
                                         <button type="submit"
                                             class="btn btn-link p-0 m-0 text-decoration-underline fw-bold"><?= $row["qa_document"] ?></button>
@@ -409,7 +595,12 @@ if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST["qaIdToEdit"])) {
                                         <?= $row["rev_no"] ?>
                                     </td>
                                     <td class="py-2 align-middle text-center">
-                                        <a href="<?= $row["wip_doc_link"] ?>"><?= $row["qa_document"] ?></a>
+                                        <form class="wip_document" method="POST">
+                                            <input type="hidden" value="<?= $row['wip_doc_link'] ?>" name="wip_document">
+                                            <button type="submit"
+                                                class="btn btn-link p-0 m-0 text-decoration-underline fw-bold"><?= $row["wip_doc_link"] ?>
+                                            </button>
+                                        </form>
                                     </td>
                                     <td class="py-2 align-middle text-center">
                                         <?= $row["department"] ?>
@@ -440,7 +631,7 @@ if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST["qaIdToEdit"])) {
                                     ?> rounded-pill"> <?= $row["status"] ?></span>
                                     </td>
                                     <td class="py-2 align-middle text-center">
-                                        <?= isset($row["approved_by"]) ? $row["approved_by"] : "N/A" ?>
+                                        <?= $row["approved_by"] ?>
                                     </td>
                                     <td class="py-2 align-middle text-center">
                                         <?= date("j F Y", strtotime($row["last_updated"])) ?>
@@ -455,7 +646,6 @@ if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST["qaIdToEdit"])) {
                                         echo "bg-danger";
                                     }
                                     ?> rounded-pill"> <?= $row["revision_status"] ?></span>
-
                                     </td>
                                     <td class="py-2 align-middle text-center">
                                         <?php if ($row["iso_9001"] == 1) { ?>
@@ -496,7 +686,7 @@ if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST["qaIdToEdit"])) {
                         <?php if ($page > 1): ?>
                             <li class="page-item">
                                 <a class="page-link" onclick="updatePage(<?php echo $page - 1; ?>); return false;"
-                                    aria-label="Previous">
+                                    aria-label="Previous" style="cursor: pointer">
                                     <span aria-hidden="true">&laquo;</span>
                                 </a>
                             </li>
@@ -524,9 +714,9 @@ if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST["qaIdToEdit"])) {
                         }
 
                         for ($i = $start_page; $i <= $end_page; $i++): ?>
-                            <li class="page-item <?php echo $i == $page ? 'active' : ''; ?>">
+                            <li class="page-item <?php echo $i == $page ? 'active' : ''; ?>" style="cursor: pointer">
                                 <a class="page-link"
-                                    onclick="updatePage(<?php echo $i?>); return false"><?php echo $i; ?></a>
+                                    onclick="updatePage(<?php echo $i ?>); return false"><?php echo $i; ?></a>
                             </li>
                         <?php endfor; ?>
 
@@ -851,10 +1041,6 @@ if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST["qaIdToEdit"])) {
                                     <option value="Sheet Metal Department Manager">Sheet Metal Department Manager
                                     </option>
                                     <option value="Operations Support Manager">Operations Support Manager</option>
-                                    <option value="QA Officer">QA Officer</option>
-                                    <option value="QA Officer">HR Officer</option>
-                                    <option value="WHS Committee">WHS Committee</option>
-                                    <option value="Risk Assessment Committee">Risk Assessment Committee</option>
                                     <option value="N/A">N/A</option>
                                 </select>
                             </div>
@@ -898,6 +1084,10 @@ if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST["qaIdToEdit"])) {
             </div>
         </div>
     </div>
+    <div id="loading-indicator" style="display: none;">
+        <div class="spinner"></div>
+        <p>Opening document...</p>
+    </div>
 
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
@@ -917,7 +1107,6 @@ if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST["qaIdToEdit"])) {
             });
         });
     </script>
-
     <script>
         document.addEventListener('DOMContentLoaded', function () {
             var myModalEl = document.getElementById('editDocumentModal');
@@ -973,17 +1162,16 @@ if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST["qaIdToEdit"])) {
             });
         });
     </script>
-
     <script>
         function updateURLWithRecordsPerPage() {
             const selectElement = document.getElementById('recordsPerPage');
             const recordsPerPage = selectElement.value;
             const url = new URL(window.location.href);
             url.searchParams.set('recordsPerPage', recordsPerPage);
+            url.searchParams.set('page', 1);
             window.location.href = url.toString();
         }
     </script>
-
     <script>
         function updateSearchQuery(department) {
             const url = new URL(window.location.href);
@@ -991,7 +1179,6 @@ if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST["qaIdToEdit"])) {
             window.location.href = url.toString();
         }
     </script>
-
     <script>
         function updatePage(page) {
             // Check if page number is valid
@@ -1002,7 +1189,71 @@ if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST["qaIdToEdit"])) {
             window.location.href = url.toString();
         }
     </script>
+    <script>
+        function updateSort(sort, order) {
+            const url = new URL(window.location.href);
+            url.searchParams.set('sort', sort);
+            url.searchParams.set('order', order);
+            window.location.href = url.toString();
+        }   
+    </script>
+    <script>
+        // Load saved zoom level from localStorage or use default
+        let currentZoom = parseFloat(localStorage.getItem('zoomLevel')) || 1;
 
+        // Apply the saved zoom level
+        document.body.style.zoom = currentZoom;
+
+        function zoom(factor) {
+            currentZoom *= factor;
+            document.body.style.zoom = currentZoom;
+
+            // Save the new zoom level to localStorage
+            localStorage.setItem('zoomLevel', currentZoom);
+        }
+
+        function resetZoom() {
+            currentZoom = 1;
+            document.body.style.zoom = currentZoom;
+
+            // Remove the zoom level from localStorage
+            localStorage.removeItem('zoomLevel');
+        }
+
+        // Optional: Reset zoom level on page load
+        window.addEventListener('load', () => {
+            document.body.style.zoom = currentZoom;
+        });
+
+    </script>
+
+    <script>
+        // Enabling the tooltip
+        const tooltips = document.querySelectorAll('.tooltips');
+        tooltips.forEach(t => {
+            new bootstrap.Tooltip(t);
+        })
+    </script>
+
+    <script>
+        // Add event listeners to all forms with the class 'document-form'
+        document.querySelectorAll('.document-form').forEach(form => {
+            form.addEventListener('submit', function () {
+                // Show the loading indicator
+                document.getElementById('loading-indicator').style.display = 'flex';
+            });
+        });
+
+        // Add event listeners to all forms with the class 'wip_document'
+        document.querySelectorAll('.wip_document').forEach(form => {
+            form.addEventListener('submit', function () {
+                // Show the loading indicator
+                document.getElementById('loading-indicator').style.display = 'flex';
+            });
+        });
+
+
+    </script>
 </body>
 
 </html>

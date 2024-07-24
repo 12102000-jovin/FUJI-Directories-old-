@@ -38,8 +38,6 @@ $user_details_result->free();
 
 // Close the prepared statement and the database connection
 $stmt->close();
-
-
 ?>
 
 <!DOCTYPE html>
@@ -59,11 +57,13 @@ $stmt->close();
             <div>
                 <div class="dropdown d-flex justify-content-between align-items-center me-2">
                     <div class="d-flex align-items-center">
-                        <img src="../Images/FE-logo.png" class="logo" style="width:3rem; height:auto;" />
+                        <a href="http://localhost/FUJI-Directories/index.php">
+                            <img src="../Images/FE-logo.png" class="logo" style="width:3rem; height:auto;" />
+                        </a>
                         <div class="vr mx-2"></div>
                         <h5 class="signature-color fw-bold mb-0">Quality Assurance</h5>
                     </div>
-            
+
                     <a class="d-flex align-items-center justify-content-center text-decoration-none text-dark" href="#"
                         role="button" id="dropdownMenuLink" data-bs-toggle="dropdown" aria-expanded="false">
                         <span class="me-2 fw-bold"><?php echo $firstName . " " . $lastName ?></span>
@@ -85,13 +85,42 @@ $stmt->close();
                         <li><a class="dropdown-item"
                                 href="ProfilePage.php?employee_id=<?php echo $employee_id ?>">Profile</a></li>
                         <?php if ($role === "admin") { ?>
-                            <li><a class="dropdown-item" href="http://localhost/FUJI-Directories/index.php?page=manageUsers">Manage User Access</a></li>
+                            <li><a class="dropdown-item"
+                                    href="http://localhost/FUJI-Directories/index.php?page=manageUsers">Manage User
+                                    Access</a></li>
                         <?php } ?>
                         <li><a class="dropdown-item text-danger" href="#" data-bs-toggle="modal"
                                 data-bs-target="#logoutModal">Logout</a></li>
                     </ul>
                 </div>
-                <?php require_once ("../logout.php"); ?>
+
+                <!-- Logout Modal -->
+                <div class="modal fade" id="logoutModal" tabindex="-1" role="dialog" aria-labelledby="logoutModalLabel"
+                    aria-hidden="true">
+                    <div class="modal-dialog">
+                        <div class="modal-content">
+                            <div class="modal-header">
+                                <h5 class="modal-title" id="logoutModalLabel">Confirm Logout</h5>
+                                <button type="button" class="btn-close" data-bs-dismiss="modal"
+                                    aria-label="Close"></button>
+                            </div>
+                            <div class="modal-body">
+                                Are you sure you want to logout?
+                            </div>
+                            <div class="modal-footer">
+                                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                                <a href="?logout=true" class="btn btn-danger">Logout</a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <style>
+                    /* Custom CSS to adjust backdrop opacity */
+                    .modal-backdrop {
+                        opacity: 0.2 !important;
+                    }
+                </style>
             </div>
         </div>
     </div>

@@ -1006,10 +1006,7 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
 
                             </div>
                         </div>
-
-
                     <?php } ?>
-
                     <div class="card bg-white border-0 rounded shadow-lg mt-4">
                         <div class="p-3">
                             <p class="fw-bold signature-color">Files</p>
@@ -1142,7 +1139,7 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
                             </div>
                         </div>
                     </div>
-                    <div class="card bg-white border-0 rounded shadow-lg mt-4">
+                    <!-- <div class="card bg-white border-0 rounded shadow-lg mt-4">
                         <div class="p-3">
                             <div class="d-flex justify-content-between">
                                 <p class="fw-bold signature-color">Policies</p>
@@ -1152,7 +1149,7 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
                             <a href="http://localhost/FUJI-Directories/CheckDirectory/Sample_Smoking_Policy.jpeg">
                                 Smoking and Vaping Policy </a>
                         </div>
-                    </div>
+                    </div> -->
                     <div class="card bg-white border-0 rounded shadow-lg mt-4">
                         <div class="p-3">
                             <p class="fw-bold signature-color">Access</p>

@@ -69,7 +69,6 @@ $folders_result = $conn->query($folders_sql);
     }
 
     @media (max-width: 576px) {
-
         /* Adjust the width of the expanded menu to 8rem on small screens */
         .expanded-menu {
             width: 8rem !important;

@@ -5,7 +5,6 @@ use PhpOffice\PhpSpreadsheet\IOFactory;
 function displayExcelFile($filePath)
 {
     if (is_dir($filePath)) {
-        // If the given path is a directory, open the 'sus`b' subfolder first
         $filePath = rtrim($filePath, '/') . '/susb/';
     }
 
@@ -37,23 +36,27 @@ function displayExcelFile($filePath)
     }
 }
 
-if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['coordinate']) && isset($_POST['value'])) {
+if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['coordinate']) && isset($_POST['value']) && isset($_POST['sheet'])) {
     $fileName = $_GET['file'];
-    $filePath = __DIR__ . '/CheckDirectory/' . $fileName;
-    $spreadsheet = IOFactory::load($filePath);
+    $filePath = '../../../../../Dekstop/QA/' . $fileName;
 
-    $coordinate = $_POST['coordinate'];
-    $value = $_POST['value'];
-    $sheetName = $_POST['sheet'];
+    if (file_exists($filePath)) {
+        $spreadsheet = IOFactory::load($filePath);
 
-    $spreadsheet->getSheetByName($sheetName)->getCell($coordinate)->setValue($value);
+        $coordinate = $_POST['coordinate'];
+        $value = $_POST['value'];
+        $sheetName = $_POST['sheet'];
 
-    $writer = IOFactory::createWriter($spreadsheet, 'Xlsx');
-    $writer->save($filePath);
+        $spreadsheet->getSheetByName($sheetName)->getCell($coordinate)->setValue($value);
 
-    // Redirect to prevent form resubmission
-    header("Location: {$_SERVER['REQUEST_URI']}");
-    exit();
+        $writer = IOFactory::createWriter($spreadsheet, 'Xlsx');
+        $writer->save($filePath);
+
+        header("Location: " . $_SERVER['REQUEST_URI']);
+        exit();
+    } else {
+        echo "<div class='alert alert-danger'>File not found.</div>";
+    }
 }
 ?>
 
@@ -68,8 +71,8 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['coordinate']) && isset
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link rel="shortcut icon" type="image/x-icon" href="Images/FE-logo-icon.ico">
-    <script src="https://code.jquery.com/jquery-3.5.1.min.js"></script>
-    <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.bundle.min.js"></script>
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <style>
         .table td {
             cursor: pointer;
@@ -82,11 +85,10 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['coordinate']) && isset
         <?php
         if (isset($_GET['file'])) {
             echo "<div class='container'>";
-            $fileName = $_GET['file'];
-            $filePath = __DIR__ . '/CheckDirectory/' . $fileName;
-            echo "<h2 class='my-4'>Displaying: " . htmlspecialchars($fileName) . "</h2>";
+            $fileName = htmlspecialchars($_GET['file']);
+            $filePath = '../../../../../Dekstop/QA/' . $fileName;
+            echo "<h2 class='my-4'>Displaying: " . $fileName . "</h2>";
             if (is_dir($filePath)) {
-                // If it's a directory, show its content
                 $directory = rtrim($filePath, '/') . '/';
                 echo "<h3>Contents of Directory: $directory</h3>";
                 if ($dh = opendir($directory)) {
@@ -94,7 +96,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['coordinate']) && isset
                     while (($file = readdir($dh)) !== false) {
                         if ($file != "." && $file != "..") {
                             $filePath = $directory . $file;
-                            echo "<li class='list-group-item'><a href='directory.php?file=" . urlencode($file) . "'>" . htmlspecialchars($file) . "</a></li>";
+                            echo "<li class='list-group-item'><a href='?file=" . urlencode($file) . "'>" . htmlspecialchars($file) . "</a></li>";
                         }
                     }
                     echo "</ul>";
@@ -104,58 +106,52 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['coordinate']) && isset
                 }
                 echo "</div>";
             } else {
-                // If it's a file, display its content
                 echo displayExcelFile($filePath);
             }
-            echo "<p><a class='btn btn-primary mt-3' href=''>Back to Directory Listing</a></p>";
+            echo "<p><a class='btn btn-primary mt-3' href='?'>Back to Directory Listing</a></p>";
         } else {
-            // Directory to scan
-            $directory = __DIR__ . '/CheckDirectory/';
+            $directory = '../../../../../Dekstop/QA';
 
-            // Open the directory
             if (is_dir($directory)) {
                 if ($dh = opendir($directory)) {
                     echo "<h6 class='my-4'>Files in directory: $directory</h6>";
                     echo "<ul class='list-group'>";
-                    // Loop through the directory and list files
                     while (($file = readdir($dh)) !== false) {
                         if ($file != "." && $file != "..") {
-                            // Determine the file extension
                             $extension = pathinfo($file, PATHINFO_EXTENSION);
-                            // Output file link
-                            if ($extension === 'xls' || $extension === 'xlsx') {
+                            if (in_array($extension, ['xls', 'xlsx'])) {
                                 echo "<li class='list-group-item d-flex justify-content-between align-items-center'>";
-                                echo "<a href='directory.php?file=" . urlencode($file) . "' target='_blank' class='d-flex align-items-center text-decoration-none'>";
+                                echo "<a href='download.php?file=" . urlencode($file) . "' target='_blank' class='d-flex align-items-center text-decoration-none'>";
                                 echo "<div class='d-grid'>";
                                 echo "<i class='fa-solid fa-file-excel text-success me-2'></i>";
                                 echo "</div>";
                                 echo "<div class='col text-dark'>" . htmlspecialchars($file) . "</div>";
                                 echo "</a>";
-                                echo "<a href='$directory$file' class='btn btn-sm btn-outline-secondary' download>Download</a>";
+                                echo "<a href='download.php?file=" . urlencode($file) . "' class='btn btn-sm btn-outline-secondary' download>Download</a>";
                                 echo "</li>";
                             } elseif (in_array($extension, ['doc', 'docx'])) {
                                 echo "<li class='list-group-item d-flex justify-content-between align-items-center'>";
-                                echo "<a href='CheckDirectory/$file' class='d-flex align-items-center text-decoration-none'>";
+                                echo "<a href='download.php?file=" . urlencode($file) . "' class='d-flex align-items-center text-decoration-none'>";
                                 echo "<div class='d-grid'>";
-                                echo "<i class='fa-solid fa-file-word  me-2'></i>";
+                                echo "<i class='fa-solid fa-file-word me-2'></i>";
                                 echo "</div>";
                                 echo "<div class='col text-dark'>" . htmlspecialchars($file) . "</div>";
                                 echo "</a>";
-                                echo "<a href='$directory$file' class='btn btn-sm btn-outline-secondary' download>Download</a>";
+                                echo "<a href='download.php?file=" . urlencode($file) . "' class='btn btn-sm btn-outline-secondary' download>Download</a>";
                                 echo "</li>";
-                            } elseif (in_array($extension, ['pdf'])) {
+                            } elseif ($extension === 'pdf') {
                                 echo "<li class='list-group-item d-flex justify-content-between align-items-center'>";
-                                echo "<a href='CheckDirectory/$file' target='_blank'  class='d-flex align-items-center text-decoration-none'>";
+                                echo "<a href='download.php?file=" . urlencode($file) . "' target='_blank' class='d-flex align-items-center text-decoration-none'>";
                                 echo "<div class='d-grid'>";
                                 echo "<i class='fa-solid fa-file-pdf text-danger me-2'></i>";
                                 echo "</div>";
                                 echo "<div class='col text-dark'>" . htmlspecialchars($file) . "</div>";
                                 echo "</a>";
-                                echo "<a href='$directory$file' class='btn btn-sm btn-outline-secondary' download>Download</a>";
+                                echo "<a href='download.php?file=" . urlencode($file) . "' class='btn btn-sm btn-outline-secondary' download>Download</a>";
                                 echo "</li>";
                             } else {
                                 echo "<li class='list-group-item'>";
-                                echo "<a href='directory.php?file=" . urlencode($file) . "' class='d-flex align-items-center text-decoration-none'> ";
+                                echo "<a href='download.php?file=" . urlencode($file) . "' class='d-flex align-items-center text-decoration-none'> ";
                                 echo "<div class='d-grid'>";
                                 echo "<i class='fa-solid fa-folder text-warning me-2'></i>";
                                 echo "</div>";
@@ -177,27 +173,24 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['coordinate']) && isset
         ?>
     </div>
 
-    <!-- Modal for editing cell -->
     <div class="modal fade" id="editModal" tabindex="-1" aria-labelledby="editModalLabel" aria-hidden="true">
         <div class="modal-dialog">
             <div class="modal-content">
                 <form method="post">
                     <div class="modal-header">
                         <h5 class="modal-title" id="editModalLabel">Edit Cell</h5>
-                        <button type="button" class="close" data-dismiss="modal" aria-label="Close">
-                            <span aria-hidden="true">&times;</span>
-                        </button>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                     </div>
                     <div class="modal-body">
-                        <div class="form-group">
-                            <label for="cellValue">Cell Value</label>
-                            <input type="text" class="form-control" id="cellValue" name="value">
+                        <input type="hidden" name="sheet" id="sheetName">
+                        <input type="hidden" name="coordinate" id="cellCoordinate">
+                        <div class="mb-3">
+                            <label for="cellValue" class="form-label">Value</label>
+                            <input type="text" class="form-control" id="cellValue" name="value" required>
                         </div>
-                        <input type="hidden" id="cellCoordinate" name="coordinate">
-                        <input type="hidden" id="sheetName" name="sheet">
                     </div>
                     <div class="modal-footer">
-                        <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
                         <button type="submit" class="btn btn-primary">Save changes</button>
                     </div>
                 </form>
@@ -206,19 +199,17 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['coordinate']) && isset
     </div>
 
     <script>
-        $(document).ready(function() {
-            $('table').on('click', 'td', function() {
-                var coordinate = $(this).data('coordinate');
-                var value = $(this).data('value');
-                var sheet = $(this).data('sheet');
-                $('#cellCoordinate').val(coordinate);
-                $('#cellValue').val(value);
-                $('#sheetName').val(sheet);
-                $('#editModal').modal('show');
+        $(document).ready(function () {
+            $('.table td').on('click', function () {
+                var $cell = $(this);
+                $('#cellCoordinate').val($cell.data('coordinate'));
+                $('#sheetName').val($cell.data('sheet'));
+                $('#cellValue').val($cell.data('value'));
+                var myModal = new bootstrap.Modal(document.getElementById('editModal'));
+                myModal.show();
             });
         });
     </script>
-
 </body>
 
 </html>

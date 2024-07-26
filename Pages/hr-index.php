@@ -404,7 +404,8 @@ $officeSectionData = array(
                     </div>
                 </div>
             </div>
-            <h1 class="mt-4 fw-bold">Section</h1>
+            <hr class="mt-5"/>
+            <h3 class="fw-bold">Section</h3>
             <div class="row">
                 <div class="col-lg-4">
                     <div class="bg-white p-2 mt-3 rounded-3">

@@ -33,14 +33,18 @@ $employee_details_result = $conn->query($employee_details_sql);
 $employee_start_date_sql = "SELECT start_date FROM employees WHERE employee_id = $employeeId";
 $employee_start_date_result = $conn->query($employee_start_date_sql);
 
-$employee_group_access_sql = "SELECT DISTINCT groups.group_name, folders.folder_name, groups.group_id, folders.folder_id
-                        FROM groups
-                        JOIN groups_folders ON groups.group_id = groups_folders.group_id
-                        JOIN folders ON folders.folder_id = groups_folders.folder_id
-                        JOIN users_groups ON users_groups.group_id = groups.group_id
-                        JOIN users ON users.user_id = users_groups.user_id
-                        JOIN employees ON employees.employee_id = users.employee_id
-                        WHERE employees.employee_id = $employeeId";
+$employee_group_access_sql = "SELECT DISTINCT 
+                                groups.group_name, 
+                                folders.folder_name, 
+                                groups.group_id, 
+                                folders.folder_id
+                              FROM groups
+                              JOIN groups_folders ON groups.group_id = groups_folders.group_id
+                              JOIN folders ON folders.folder_id = groups_folders.folder_id
+                              JOIN users_groups ON users_groups.group_id = groups.group_id
+                              JOIN users ON users.user_id = users_groups.user_id
+                              JOIN employees ON employees.employee_id = users.employee_id
+                              WHERE employees.employee_id = $employeeId";
 
 $employee_group_access_result = $conn->query($employee_group_access_sql);
 
@@ -1041,7 +1045,7 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
                                                 <span>
                                                     <div class="d-flex align-items-center">
                                                         <small id="pay-review-directory-path" class="me-1 text-break"
-                                                            style="color:#b1b1b1"><?php echo "/Users/jovinhampton/Documents/Employees/$employeeId/Pay%20Review" ?></small>
+                                                            style="color:#b1b1b1"><?php echo "file:///Users/jovinhampton/Documents/Employees/$employeeId/Pay%20Review" ?></small>
                                                         <button id="copy-button" class="btn rounded btn-sm"
                                                             onclick="copyDirectoryPath(this)"><i
                                                                 class="fa-regular fa-copy text-primary fa-xs p-0 m-0"></i>
@@ -1116,7 +1120,7 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
                                     <div class="col">
                                         <div class="d-flex align-items-center">
                                             <div class="d-flex flex-column">
-                                            <form method="POST">
+                                                <form method="POST">
                                                     <input type="hidden" name="policiesFolder">
                                                     <button type="submit"
                                                         class="btn btn-link p-0 m-0 text-decoration-underline fw-bold">Policies</button>

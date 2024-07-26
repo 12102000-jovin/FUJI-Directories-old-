@@ -135,7 +135,7 @@ VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 
 <div class="row-cols-1 row-cols-md-3">
     <div class="mt-5 bg-light rounded p-md-5 p-4 col-12 col-md-12 shadow-lg">
         <h3 class="fw-bold text-center">Add New Employee</h3>
-        <form method="POST" enctype="multipart/form-data">
+        <form method="POST" enctype="multipart/form-data" class="">
             <div class="row">
                 <div class="col-12 col-lg-6 px-md-5">
                     <!-- ================ P E R S O N A L   D E T A I L S ================  -->

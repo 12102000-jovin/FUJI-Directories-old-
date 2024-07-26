@@ -15,33 +15,44 @@ $sort = isset($_GET['sort']) ? $_GET['sort'] : 'qa_document';
 $order = isset($_GET['order']) ? $_GET['order'] : 'asc';
 
 // Pagination
-$records_per_page = isset($_GET["recordsPerPage"]) ? intval($_GET["recordsPerPage"]) : 5; // Number of records per page
+$records_per_page = isset($_GET["recordsPerPage"]) ? intval($_GET["recordsPerPage"]) : 10; // Number of records per page
 $page = isset($_GET["page"]) ? intval($_GET["page"]) : 1; //Current Page
 $offset = ($page - 1) * $records_per_page; // Offset for SQL query
 
 // Get search term
 $searchTerm = isset($_GET['search']) ? $conn->real_escape_string($_GET['search']) : '';
 
+// Get status filter
+$statusFilter = isset($_GET['statusFilter']) ? $conn->real_escape_string($_GET['statusFilter']) : '';
+
+// Get revision status filter
+$revisionStatusFilter = isset($_GET['revisionStatusFilter']) ? $conn->real_escape_string($_GET['revisionStatusFilter']) : '';
+
 // SQL Query to retrieve QA details with LIMIT for pagination
 $qa_sql = "SELECT * FROM quality_assurance WHERE
-    qa_document LIKE '%$searchTerm%' OR
+    (qa_document LIKE '%$searchTerm%' OR
     document_name LIKE '%$searchTerm%' OR
     document_description LIKE '%$searchTerm%' OR
-    department LIKE '%$searchTerm%'
-    ORDER BY $sort $order
+    department LIKE '%$searchTerm%')
+    AND (status = '$statusFilter' OR '$statusFilter' = '')
+    AND (revision_status = '$revisionStatusFilter' OR '$revisionStatusFilter' = '')
+    ORDER BY $sort $order 
     LIMIT $offset, $records_per_page";
 $qa_result = $conn->query($qa_sql);
 
 // Get total number of records
 $total_records_sql = "SELECT COUNT(*) AS total FROM quality_assurance WHERE
-    qa_document LIKE '%$searchTerm%' OR
+    (qa_document LIKE '%$searchTerm%' OR
     document_name LIKE '%$searchTerm%' OR
     document_description LIKE '%$searchTerm%' OR
-    department LIKE '%$searchTerm%'
-    ";
+    department LIKE '%$searchTerm%')
+    AND (status = '$statusFilter' OR '$statusFilter' = '')
+    AND (revision_status = '$revisionStatusFilter' OR '$revisionStatusFilter' = '')";
+
 $total_records_result = $conn->query($total_records_sql);
 $total_records = $total_records_result->fetch_assoc()['total'];
 $total_pages = ceil($total_records / $records_per_page);
+
 
 //  ========================= O P E N  (Q A)  D O C U M E N T [PDF] ========================= 
 if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST["qa_document"])) {
@@ -78,14 +89,14 @@ if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST["qa_document"])) {
         if (!empty($_SERVER['QUERY_STRING'])) {
             $current_url .= '?' . $_SERVER['QUERY_STRING'];
         }
-    
+
         // Output JavaScript to show alert and reload the page with parameters
         echo "<script>
                 alert('Failed to open the document.');
                 window.location.href = '" . $current_url . "';
               </script>";
         exit();
-    }    
+    }
 }
 
 // =========================  O P E N  (Q A)  D O C U M E N T [DOC] =========================
@@ -123,14 +134,14 @@ if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST["wip_document"])) {
         if (!empty($_SERVER['QUERY_STRING'])) {
             $current_url .= '?' . $_SERVER['QUERY_STRING'];
         }
-    
+
         // Output JavaScript to show alert and reload the page with parameters
         echo "<script>
                 alert('Failed to open the document.');
                 window.location.href = '" . $current_url . "';
               </script>";
         exit();
-    }    
+    }
 }
 
 // ========================= A D D   D O C U M E N T =========================
@@ -169,7 +180,6 @@ if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST["addDocument"])) {
     }
     $add_document_result->close();
 }
-
 
 // ========================= D E L E T E  D O C U M E N T =========================
 if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST["qaIdToDelete"])) {
@@ -249,6 +259,50 @@ if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST["qaIdToEdit"])) {
         echo "Error updating record: " . $edit_document_result->error;
     }
 
+}
+
+// ========================= E D I T  S T A T U S ========================= 
+if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST["statusCellToEdit"])) {
+    $qaIdToEdit = $_POST["qaIdToEditStatusCell"];
+    $statusToEdit = $_POST["statusCellToEdit"];
+
+    $update_status_sql = "UPDATE quality_assurance SET status = ? WHERE qa_id = ?";
+    $update_status_result = $conn->prepare($update_status_sql);
+    $update_status_result->bind_param("si", $statusToEdit, $qaIdToEdit);
+
+    if ($update_status_result->execute()) {
+        // Redirect to the same URL to refresh data
+        $current_url = $_SERVER['PHP_SELF'];
+        if (!empty($_SERVER['QUERY_STRING'])) {
+            $current_url .= '?' . $_SERVER['QUERY_STRING'];
+        }
+        header("Location: " . $current_url);
+        exit();
+    } else {
+        echo "Error updating status: " . $update_status_result->error;
+    }
+}
+
+// ========================= E D I T  R E V I S I O N  S T A T U S =========================
+if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST["revisionStatusCellToEdit"])) {
+    $qaIdToEdit = $_POST["qaIdToEditRevisionStatusCell"];
+    $revisionStatusToEdit = $_POST["revisionStatusCellToEdit"];
+
+    $update_revision_status_sql = "UPDATE quality_assurance SET revision_status = ? WHERE qa_id = ?";
+    $update_revision_status_result = $conn->prepare($update_revision_status_sql);
+    $update_revision_status_result->bind_param("si", $revisionStatusToEdit, $qaIdToEdit);
+
+    if ($update_revision_status_result->execute()) {
+        // Redirect to the same URL to refresh data
+        $current_url = $_SERVER['PHP_SELF'];
+        if (!empty($_SERVER['QUERY_STRING'])) {
+            $current_url .= '?' . $_SERVER['QUERY_STRING'];
+        }
+        header("Location: " . $current_url);
+        exit();
+    } else {
+        echo "Error updating status: " . $update_revision_status_result->error;
+    }
 }
 ?>
 
@@ -378,12 +432,15 @@ if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST["qaIdToEdit"])) {
         <div class="d-flex justify-content-between align-items-center">
             <nav aria-label="breadcrumb">
                 <ol class="breadcrumb">
-
                     <li class="breadcrumb-item"><a href="http://localhost/FUJI-Directories/index.php">Home</a></li>
                     <li class="breadcrumb-item active fw-bold" style="color:#043f9d" aria-current="page">QA</li>
                 </ol>
             </nav>
             <div class="d-flex justify-content-end mb-3">
+                <div class="d-flex align-items-start me-2 mt-0 pt-0">
+                    <button class="btn btn-sm btn-secondary" data-bs-toggle="modal" data-bs-target="#filterColumnModal">
+                        <i class="fa-solid fa-sliders me-1"></i>Filter Column</button>
+                </div>
                 <div class="btn-group shadow-lg" role="group" aria-label="Zoom Controls">
                     <button class="btn btn-sm btn-light" style="cursor:pointer" onclick="zoom(0.8)"><i
                             class="fa-solid fa-magnifying-glass-minus"></i></button>
@@ -396,7 +453,7 @@ if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST["qaIdToEdit"])) {
         </div>
         <div class="row mb-3">
             <div class="d-flex justify-content-between align-items-center">
-                <div class="col-md-5">
+                <div class="col-8 col-lg-5">
                     <form method="GET">
                         <div class="d-flex align-items-center">
                             <div class="input-group me-2">
@@ -407,12 +464,17 @@ if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST["qaIdToEdit"])) {
                             <button class="btn" type="submit"
                                 style="background-color:#043f9d; color: white; transition: 0.3s ease !important;">Search
                             </button>
+                            <button class="btn btn-danger ms-2"><a class="dropdown-item" href="#"
+                                    onclick="clearURLParameters()">Clear</a></button>
                             <div class="dropdown">
                                 <button class="btn btn-outline-dark dropdown-toggle ms-2" type="button"
                                     id="departmentDropdownMenuButton" data-bs-toggle="dropdown" aria-expanded="false">
                                     Department
                                 </button>
                                 <ul class="dropdown-menu" aria-labelledby="departmentDropdownMenuButton">
+                                    <li><a class="dropdown-item" href="#" onclick="updateSearchQuery('')">All
+                                            Departments</a>
+                                    </li>
                                     <li><a class="dropdown-item" href="#"
                                             onclick="updateSearchQuery('Accounts')">Accounts</a>
                                     </li>
@@ -460,91 +522,133 @@ if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST["qaIdToEdit"])) {
                     </form>
                 </div>
 
-                <div class="d-flex justify-content-end align-items-center col-md-2">
-                    <button class="btn btn-dark" data-bs-toggle="modal" data-bs-target="#addDocumentModal"> <i
-                            class="fa-solid fa-plus"></i> Add Document</button>
-                </div>
+                <?php if ($role === "admin") { ?>
+                    <div class="d-flex justify-content-end align-items-center col-4 col-lg-7">
+                        <button class="btn btn-dark" data-bs-toggle="modal" data-bs-target="#addDocumentModal"> <i
+                                class="fa-solid fa-plus"></i> Add Document</button>
+                    </div>
+                <?php } ?>
             </div>
         </div>
         <div class="table-responsive rounded-3 shadow-lg bg-light m-0">
             <table class="table table-hover mb-0 pb-0">
                 <thead>
                     <tr class="text-center">
-                        <th></th>
-                        <th class="py-4 align-middle" style="min-width:200px">
+                        <?php if ($role === "admin") { ?>
+                            <th></th>
+                        <?php } ?>
+                        <th class="py-4 align-middle qaDocument" style="min-width:200px">
                             <a onclick="updateSort('qa_document', '<?= $order == 'asc' ? 'desc' : 'asc' ?>')"
                                 class="text-decoration-none text-white" style="cursor: pointer;">
                                 QA Document <i class="fa-solid fa-sort fa-md ms-1"></i>
                             </a>
                         </th>
-                        <th class="py-4 align-middle" style="min-width:200px">
+                        <th class="py-4 align-middle documentName" style="min-width:200px">
                             <a onclick="updateSort('document_name', '<?= $order == 'asc' ? 'desc' : 'asc' ?>')"
                                 class="text-decoration-none text-white" style="cursor: pointer;">
                                 Document Name<i class="fa-solid fa-sort fa-md ms-1"></i>
                             </a>
                         </th>
-                        <th class="py-4 align-middle" style="min-width:400px">
+                        <th class="py-4 align-middle documentDescription" style="min-width:400px">
                             <a onclick="updateSort('document_description', '<?= $order == 'asc' ? 'desc' : 'asc' ?>')"
                                 class="text-decoration-none text-white" style="cursor: pointer;">
                                 Document Description <i class="fa-solid fa-sort fa-md ms-1"></i>
                             </a>
                         </th>
                         <?php if ($role === "admin") { ?>
-                            <th class="py-4 align-middle" style="min-width:100px">
+                            <th class="py-4 align-middle revNo" style="min-width:100px">
                                 <a onclick="updateSort('rev_no','<?= $order == 'asc' ? 'desc' : 'asc' ?>')"
                                     class="text-decoration-none text-white" style="cursor: pointer;">
                                     Rev No. <i class="fa-solid fa-sort fa-md ms-1"></i>
                                 </a>
                             </th>
-                            <th class="py-4 align-middle" style="min-width:200px">
+                            <th class="py-4 align-middle revisionStatus">
+                                <div class="dropdown">
+                                    <a class="text-decoration-none text-white" href="#" role="button"
+                                        data-bs-toggle="dropdown" aria-expanded="false">
+                                        Revision Status<i class="fa-solid fa-sort fa-md ms-2"></i>
+                                    </a>
+                                    <div class="dropdown-menu">
+                                        <a class="dropdown-item"
+                                            onclick="updateSort('revision_status','<?= $order == 'asc' ? 'desc' : 'asc' ?>')"
+                                            class="text-decoration-none text-white" style="cursor:pointer">
+                                            <?php if ($order === 'asc') { ?>
+                                                <i class="fa-solid fa-arrow-down-z-a me-2 signature-color"></i> Sort Z-A
+                                            <?php } else if ($order === 'desc') { ?>
+                                                    <i class="fa-solid fa-arrow-down-z-a me-2 signature-color"></i> Sort A-Z
+                                            <?php } ?>
+                                        </a>
+                                        <a class="dropdown-item" data-bs-toggle="modal"
+                                            data-bs-target="#filterRevisionStatusModal">
+                                            <i class="fa-solid fa-filter me-2 signature-color"></i>Sort By Revision Status
+                                        </a>
+                                    </div>
+                                </div>
+                                <!-- <a onclick="updateSort('revision_status', '<?= $order == 'asc' ? 'desc' : 'asc' ?>')"
+                                    class="text-decoration-none text-white" style="cursor:pointer">
+                                    Revision Status <i class="fa-solid fa-sort fa-md ms-1"></i>
+                                </a> -->
+                            </th>
+                            <th class="py-4 align-middle wipDocLink" style="min-width:200px">
                                 <a onclick="updateSort('wip_doc_link', '<?= $order == 'asc' ? 'desc' : 'asc' ?>')"
                                     class="text-decoration-none text-white" style="cursor: pointer;">
                                     WIP Doc Link <i class="fa-solid fa-sort fa-md ms-1"></i>
                                 </a>
                             </th>
-                            <th class="py-4 align-middle" style="min-width:200px">
+                            <th class="py-4 align-middle department" style="min-width:200px">
                                 <a onclick="updateSort('department', '<?= $order == 'asc' ? 'desc' : 'asc' ?>')"
                                     class="text-decoration-none text-white" style="cursor: pointer;">
                                     Department<i class="fa-solid fa-sort fa-md ms-1"></i>
                                 </a>
                             </th>
-                            <th class="py-4 align-middle">
+                            <th class="py-4 align-middle type">
                                 <a onclick="updateSort('Type', '<?= $order == 'asc' ? 'desc' : 'asc' ?>')"
                                     class="text-decoration-none text-white" style="cursor: pointer;">
                                     Type<i class="fa-solid fa-sort fa-md ms-1"></i>
                                 </a>
                             </th>
-                            <th class="py-4 align-middle">
+                            <th class="py-4 align-middle owner">
                                 <a onclick="updateSort('Owner', '<?= $order == 'asc' ? 'desc' : 'asc' ?>')"
                                     class="text-decoration-none text-white" style="cursor:pointer">
                                     Owner<i class="fa-solid fa-sort fa-md ms-1"></i>
                                 </a>
                             </th>
-                            <th class="py-4 align-middle">
-                                <a onclick="updateSort('Status','<?= $order == 'asc' ? 'desc' : 'asc' ?>')"
-                                    class="text-decoration-none text-white" style="cursor:pointer">
-                                    Status<i class="fa-solid fa-sort fa-md ms-1"></i>
-                                </a>
+                            <th class="py-4 align-middle status">
+                                <div class="dropdown">
+                                    <a class="text-decoration-none text-white" href="#" role="button"
+                                        data-bs-toggle="dropdown" aria-expanded="false">
+                                        Status<i class="fa-solid fa-sort fa-md ms-2"></i>
+                                    </a>
+                                    <div class="dropdown-menu">
+                                        <a class="dropdown-item"
+                                            onclick="updateSort('Status','<?= $order == 'asc' ? 'desc' : 'asc' ?>')"
+                                            class="text-decoration-none text-white" style="cursor:pointer">
+                                            <?php if ($order === 'asc') { ?>
+                                                <i class="fa-solid fa-arrow-down-z-a me-2 signature-color"></i> Sort Z-A
+                                            <?php } else if ($order === 'desc') { ?>
+                                                    <i class="fa-solid fa-arrow-down-z-a me-2 signature-color"></i> Sort A-Z
+                                            <?php } ?>
+                                        </a>
+                                        <a class="dropdown-item" data-bs-toggle="modal" data-bs-target="#filterStatusModal">
+                                            <i class="fa-solid fa-filter me-2 signature-color"></i>Sort By Status
+                                        </a>
+                                    </div>
+                                </div>
                             </th>
-                            <th class="py-4 align-middle" style="min-width:200px">
+                            <th class="py-4 align-middle approvedBy" style="min-width:200px">
                                 <a onclick="updateSort('approved_by', '<?= $order == 'asc' ? 'desc' : 'asc' ?>')"
                                     class="text-decoration-none text-white" style="cursor:pointer">
                                     Approved By<i class="fa-solid fa-sort fa-md ms-1"></i>
                                 </a>
                             </th>
-                            <th class="py-4 align-middle" style="min-width:200px">
+                            <th class="py-4 align-middle lastUpdated" style="min-width:200px">
                                 <a onclick="updateSort('last_updated', '<?= $order == 'asc' ? 'desc' : 'asc' ?>')"
                                     class="text-decoration-none text-white" style="cursor:pointer">
                                     Last Updated <i class="fa-solid fa-sort fa-md ms-1"></i>
                                 </a>
                             </th>
-                            <th class="py-4 align-middle">
-                                <a onclick="updateSort('revision_status', '<?= $order == 'asc' ? 'desc' : 'asc' ?>')"
-                                    class="text-decoration-none text-white" style="cursor:pointer">
-                                    Revision Status <i class="fa-solid fa-sort fa-md ms-1"></i>
-                                </a>
-                            </th>
-                            <th class="py-4 align-middle" style="min-width:120px">
+
+                            <th class="py-4 align-middle iso9001" style="min-width:120px">
                                 <a onclick="updateSort('iso_9001', '<?= $order == 'asc' ? 'desc' : 'asc' ?>')"
                                     class="text-decoration-none text-white" style="cursor:pointer">
                                     ISO 9001 <i class="fa-solid fa-sort fa-md ms-1"></i>
@@ -557,86 +661,67 @@ if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST["qaIdToEdit"])) {
                     <?php if ($qa_result->num_rows > 0) { ?>
                         <?php while ($row = $qa_result->fetch_assoc()) { ?>
                             <tr class="document-row">
-                                <td class="align-middle">
-                                    <div class="d-flex">
-                                        <button class="btn" data-bs-toggle="modal" data-bs-target="#editDocumentModal"
-                                            data-qa-id="<?= $row["qa_id"] ?>" data-qa-document="<?= $row["qa_document"] ?>"
-                                            data-document-name="<?= $row["document_name"] ?>"
-                                            data-document-description="<?= $row["document_description"] ?>"
-                                            data-rev-no="<?= $row["rev_no"] ?>" data-department="<?= $row["department"] ?>"
-                                            data-type="<?= $row["type"] ?>" data-owner="<?= $row["owner"] ?>"
-                                            data-status="<?= $row["status"] ?>" data-approved-by="<?= $row["approved_by"] ?>"
-                                            data-last-updated="<?= $row["last_updated"] ?>"
-                                            data-revision-status="<?= $row["revision_status"] ?>"
-                                            data-iso-9001="<?= $row["iso_9001"] ?>">
-                                            <i class="fa-regular fa-pen-to-square"></i>
-                                        </button>
+                                <?php if ($role === "admin") { ?>
+                                    <td class="align-middle">
+                                        <div class="d-flex">
+                                            <button class="btn" data-bs-toggle="modal" data-bs-target="#editDocumentModal"
+                                                data-qa-id="<?= $row["qa_id"] ?>" data-qa-document="<?= $row["qa_document"] ?>"
+                                                data-document-name="<?= $row["document_name"] ?>"
+                                                data-document-description="<?= $row["document_description"] ?>"
+                                                data-rev-no="<?= $row["rev_no"] ?>" data-department="<?= $row["department"] ?>"
+                                                data-type="<?= $row["type"] ?>" data-owner="<?= $row["owner"] ?>"
+                                                data-status="<?= $row["status"] ?>" data-approved-by="<?= $row["approved_by"] ?>"
+                                                data-last-updated="<?= $row["last_updated"] ?>"
+                                                data-revision-status="<?= $row["revision_status"] ?>"
+                                                data-iso-9001="<?= $row["iso_9001"] ?>">
+                                                <i class="fa-regular fa-pen-to-square"></i>
+                                            </button>
 
-                                        <button class="btn" data-bs-toggle="modal" data-bs-target="#deleteConfirmationModal"
-                                            data-qa-id="<?= $row["qa_id"] ?>" data-qa-document="<?= $row["qa_document"] ?>"><i
-                                                class="fa-regular fa-trash-can text-danger"></i></button>
-                                    </div>
-                                </td>
-                                <td class="py-2 align-middle text-center document-title">
+                                            <button class="btn" data-bs-toggle="modal" data-bs-target="#deleteConfirmationModal"
+                                                data-qa-id="<?= $row["qa_id"] ?>" data-qa-document="<?= $row["qa_document"] ?>"><i
+                                                    class="fa-regular fa-trash-can text-danger"></i></button>
+                                        </div>
+                                    </td>
+                                <?php } ?>
+                                <td class="py-2 align-middle text-center document-title qaDocument">
                                     <form class="document-form" method="POST">
                                         <input type="hidden" value=<?= $row['qa_document'] ?> name="qa_document">
-                                        <button type="submit"
-                                            class="btn btn-link p-0 m-0 text-decoration-underline fw-bold"><?= $row["qa_document"] ?></button>
+                                        <a href="download.php?file=<?= urlencode($row['qa_document']) ?>.pdf" target="_blank"
+                                            class="btn btn-link p-0 m-0 text-decoration-underline fw-bold">
+                                            <?= htmlspecialchars($row["qa_document"], ENT_QUOTES, 'UTF-8') ?>
+                                        </a>
+
                                     </form>
                                 </td>
-                                <td class="py-2 align-middle document-name">
+                                <td class="py-2 align-middle document-name documentName">
                                     <?= $row["document_name"] ?>
                                 </td>
-                                <td class="py-2 align-middle">
+                                <td class="py-2 align-middle documentDescription">
                                     <?= $row["document_description"] ?>
                                 </td>
                                 <?php if ($role === "admin") { ?>
-                                    <td class="py-2 align-middle text-center">
+                                    <td class="py-2 align-middle text-center revNo">
                                         <?= $row["rev_no"] ?>
                                     </td>
-                                    <td class="py-2 align-middle text-center">
-                                        <form class="wip_document" method="POST">
-                                            <input type="hidden" value="<?= $row['wip_doc_link'] ?>" name="wip_document">
-                                            <button type="submit"
-                                                class="btn btn-link p-0 m-0 text-decoration-underline fw-bold"><?= $row["wip_doc_link"] ?>
-                                            </button>
+                                    <td class="py-2 align-middle text-center revisionStatus" ondblclick="editRevisionStatus(this)">
+                                        <form method="POST" class="edit-revision-status-form" style="display:none">
+                                            <div class="d-flex align-items-center">
+                                                <input type="hidden" name="qaIdToEditRevisionStatusCell"
+                                                    value="<?= $row['qa_id'] ?>">
+                                                <select name="revisionStatusCellToEdit" class="form-select"
+                                                    onchange="this.form.submit()">
+                                                    <option value="Normal" <?= $row['revision_status'] === 'Normal' ? 'selected' : '' ?>>Normal</option>
+                                                    <option value="Revision Required" <?= $row['revision_status'] === 'Revision Required' ? 'selected' : '' ?>>Revision Required</option>
+                                                    <option value="Urgent Revision Required" <?= $row['revision_status'] === 'Urgent Revision Required' ? 'selected' : '' ?>>Urgent Revision Required</option>
+                                                </select>
+                                                <a class="text-danger mx-2 text-decoration-none" style="cursor: pointer"
+                                                    onclick="cancelEditRevisionStatus(this)">
+                                                    <div class="d-flex align-items-center">
+                                                        <i class="fa-solid fa-xmark"></i>
+                                                    </div>
+                                                </a>
+                                            </div>
                                         </form>
-                                    </td>
-                                    <td class="py-2 align-middle text-center">
-                                        <?= $row["department"] ?>
-                                    </td>
-                                    <td class="py-2 align-middle text-center">
-                                        <?= $row["type"] ?>
-                                    </td>
-                                    <td class="py-2 align-middle text-center">
-                                        <?= $row["owner"] ?>
-                                    </td>
-                                    <td class="py-2 align-middle text-center">
-                                        <span class="badge 
-                                    <?php if ($row["status"] === "Approved") {
-                                        echo "bg-success";
-                                    } else if ($row["status"] === "Need to review") {
-                                        echo "bg-light text-dark border ";
-                                    } else if ($row["status"] === "In progress") {
-                                        echo "bg-warning";
-                                    } else if ($row["status"] === "To be created") {
-                                        echo "bg-secondary";
-                                    } else if ($row["status"] === "Pending approval") {
-                                        echo "bg-primary";
-                                    } else if ($row["status"] === "Not approved yet") {
-                                        echo "bg-info";
-                                    } else if ($row["status"] === "Revision/Creation requested") {
-                                        echo "bg-danger";
-                                    }
-                                    ?> rounded-pill"> <?= $row["status"] ?></span>
-                                    </td>
-                                    <td class="py-2 align-middle text-center">
-                                        <?= $row["approved_by"] ?>
-                                    </td>
-                                    <td class="py-2 align-middle text-center">
-                                        <?= date("j F Y", strtotime($row["last_updated"])) ?>
-                                    </td>
-                                    <td class="py-2 align-middle text-center">
                                         <span class="badge 
                                     <?php if ($row["revision_status"] === "Normal") {
                                         echo "bg-success";
@@ -647,7 +732,74 @@ if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST["qaIdToEdit"])) {
                                     }
                                     ?> rounded-pill"> <?= $row["revision_status"] ?></span>
                                     </td>
-                                    <td class="py-2 align-middle text-center">
+                                    <td class="py-2 align-middle text-center wipDocLink">
+                                        <form class="wip_document" method="POST">
+                                            <input type="hidden" value="<?= $row['wip_doc_link'] ?>" name="wip_document">
+                                            <button type="submit"
+                                                class="btn btn-link p-0 m-0 text-decoration-underline fw-bold"><?= $row["wip_doc_link"] ?>
+                                            </button>
+                                        </form>
+                                    </td>
+                                    <td class="py-2 align-middle text-center department">
+                                        <?= $row["department"] ?>
+                                    </td>
+                                    <td class="py-2 align-middle text-center type">
+                                        <?= $row["type"] ?>
+                                    </td>
+                                    <td class="py-2 align-middle text-center owner">
+                                        <?= $row["owner"] ?>
+                                    </td>
+                                    <td class="py-2 align-middle text-center status" ondblclick="editStatus(this)">
+                                        <form method="POST" class="edit-status-form" style="display:none">
+                                            <div class="d-flex align-items-center">
+                                                <input type="hidden" name="qaIdToEditStatusCell"
+                                                    value="<?= htmlspecialchars($row['qa_id']) ?>">
+                                                <select name="statusCellToEdit" class="form-select" onchange="this.form.submit()">
+                                                    <option value="Approved" <?= $row['status'] === 'Approved' ? 'selected' : '' ?>>
+                                                        Approved</option>
+                                                    <option value="Need to review" <?= $row['status'] === 'Need to review' ? 'selected' : '' ?>>Need to review</option>
+                                                    <option value="In progress" <?= $row['status'] === 'In progress' ? 'selected' : '' ?>>In progress</option>
+                                                    <option value="To be created" <?= $row['status'] === 'To be created' ? 'selected' : '' ?>>To be created</option>
+                                                    <option value="Pending approval" <?= $row['status'] === 'Pending approval' ? 'selected' : '' ?>>Pending approval</option>
+                                                    <option value="Not approved yet" <?= $row['status'] === 'Not approved yet' ? 'selected' : '' ?>>Not approved yet</option>
+                                                    <option value="Revision/Creation requested"
+                                                        <?= $row['status'] === 'Revision/Creation requested' ? 'selected' : '' ?>>
+                                                        Revision/Creation requested</option>
+                                                </select>
+                                                <a class="text-danger mx-2 text-decoration-none" style="cursor:pointer"
+                                                    onclick="cancelEditStatus(this)">
+                                                    <div class="d-flex align-items-center">
+                                                        <i class="fa-solid fa-xmark"></i>
+                                                    </div>
+                                                </a>
+                                            </div>
+                                        </form>
+                                        <span class="badge
+        <?php
+                if ($row["status"] === "Approved") {
+                    echo "bg-success";
+                } else if ($row["status"] === "Need to review") {
+                    echo "bg-light text-dark border";
+                } else if ($row["status"] === "In progress") {
+                    echo "bg-warning";
+                } else if ($row["status"] === "To be created") {
+                    echo "bg-secondary";
+                } else if ($row["status"] === "Pending approval") {
+                    echo "bg-primary";
+                } else if ($row["status"] === "Not approved yet") {
+                    echo "bg-info";
+                } else if ($row["status"] === "Revision/Creation requested") {
+                    echo "bg-danger";
+                }
+                ?> rounded-pill"> <?= htmlspecialchars($row["status"]) ?></span>
+                                    </td>
+                                    <td class="py-2 align-middle text-center approvedBy">
+                                        <?= $row["approved_by"] ?>
+                                    </td>
+                                    <td class="py-2 align-middle text-center lastUpdated">
+                                        <?= date("j F Y", strtotime($row["last_updated"])) ?>
+                                    </td>
+                                    <td class="py-2 align-middle text-center iso9001">
                                         <?php if ($row["iso_9001"] == 1) { ?>
                                             Yes
                                         <?php } else if ($row["iso_9001"] == 0) { ?>
@@ -666,16 +818,16 @@ if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST["qaIdToEdit"])) {
                     <?php } ?>
             </table>
             <div class="d-flex justify-content-end mt-3 pe-2">
-                <div class="d-flex align-items-center align-items-center me-2">
+                <div class="d-flex align-items-center  me-2">
                     <p>Rows Per Page: </p>
                 </div>
 
                 <form method="GET" class="me-2">
                     <select class="form-select" id="recordsPerPage" name="recordsPerPage"
                         onchange="updateURLWithRecordsPerPage()">
-                        <option value="5" <?php echo $records_per_page == 5 ? 'selected' : ''; ?>>5</option>
                         <option value="10" <?php echo $records_per_page == 10 ? 'selected' : ''; ?>>10</option>
                         <option value="20" <?php echo $records_per_page == 20 ? 'selected' : ''; ?>>20</option>
+                        <option value="30" <?php echo $records_per_page == 30 ? 'selected' : ''; ?>>30</option>
                     </select>
                 </form>
 
@@ -972,6 +1124,7 @@ if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST["qaIdToEdit"])) {
                                     <option value="Quality Assurance">Quality Assurance</option>
                                     <option value="Quality Control">Quality Control</option>
                                     <option value="Research & Development">Research & Development</option>
+                                    <option value="Sheet Metal">Sheet Metal</option>
                                     <option value="Special Projects">Special Projects</option>
                                     <option value="Work, Health and Safety">Work, Health and Safety</option>
                                     <option value="N/A">N/A</option>
@@ -1084,6 +1237,200 @@ if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST["qaIdToEdit"])) {
             </div>
         </div>
     </div>
+    <!-- ================== Filter Column Modal ================== -->
+    <div class="modal fade" id="filterColumnModal" tabindex="-1" aria-labelledby="filterColumnModal" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="ninthMonthPerformanceReviewModalLabel">Filter Column</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <div>
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" value="" id="qaDocumentCheckBox"
+                                data-column="qaDocument">
+                            <label class="form-check-label" for="qaDocumentCheckBox">
+                                QA Document
+                            </label>
+                        </div>
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" value="" id="documentNameCheckBox"
+                                data-column="documentName">
+                            <label class="form-check-label" for="documentNameCheckBox">
+                                Document Name
+                            </label>
+                        </div>
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" value="" id="documentDescriptionCheckBox"
+                                data-column="documentDescription">
+                            <label class="form-check-label" for="documentDescriptionCheckBox">
+                                Document Description
+                            </label>
+                        </div>
+                        <?php if ($role === "admin") { ?>
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" value="" id="revNoCheckBox"
+                                    data-column="revNo">
+                                <label class="form-check-label" for="revNoCheckBox">
+                                    Rev No.
+                                </label>
+                            </div>
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" value="" id="wipDocumentCheckBox"
+                                    data-column="wipDocLink">
+                                <label class="form-check-label" for="wipDocumentCheckBox">
+                                    WIP Doc Link
+                                </label>
+                            </div>
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" value="" id="departmentCheckBox"
+                                    data-column="department">
+                                <label class="form-check-label" for="departmentCheckBox">
+                                    Department
+                                </label>
+                            </div>
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" value="" id="typeCheckBox"
+                                    data-column="type">
+                                <label class="form-check-label" for="typeCheckBox">
+                                    Type
+                                </label>
+                            </div>
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" value="" id="ownerCheckBox"
+                                    data-column="owner">
+                                <label class="form-check-label" for="ownerCheckBox">
+                                    Owner
+                                </label>
+                            </div>
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" value="" id="statusCheckBox"
+                                    data-column="status">
+                                <label class="form-check-label" for="statusCheckBox">
+                                    Status
+                                </label>
+                            </div>
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" value="" id="approvedByCheckBox"
+                                    data-column="approvedBy">
+                                <label class="form-check-label" for="approvedByCheckBox">
+                                    Approved By
+                                </label>
+                            </div>
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" value="" id="lastUpdatedCheckBox"
+                                    data-column="lastUpdated">
+                                <label class="form-check-label" for="lastUpdatedCheckBox">
+                                    Last Updated
+                                </label>
+                            </div>
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" value="" id="revisionStatusCheckBox"
+                                    data-column="revisionStatus">
+                                <label class="form-check-label" for="revisionStatusCheckBox">
+                                    Revision Status
+                                </label>
+                            </div>
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" value="" id="iso9001CheckBox"
+                                    data-column="iso9001">
+                                <label class="form-check-label" for="iso9001CheckBox">
+                                    ISO 9001
+                                </label>
+                            </div>
+                        <?php } ?>
+                    </div>
+                    <div class="d-flex justify-content-end" style="cursor:pointer">
+                        <button onclick="resetColumnFilter()" class="btn btn-sm btn-danger me-1"> Reset Filter</button>
+                        <button type="button" class="btn btn-sm btn-dark" data-bs-dismiss="modal">Done</button>
+                    </div>
+
+                </div>
+            </div>
+        </div>
+    </div>
+    <!-- ================== Filter by Status Modal ================== -->
+    <div class="modal fade" id="filterStatusModal" tabindex="-1" aria-labelledby="filterStatusModalLabel"
+        aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="filterStatusModalLabel">Filter by Status</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <form method="GET" action="">
+                        <!-- Preserve URL parameters -->
+                        <input type="hidden" name="sort" value="<?= htmlspecialchars($sort) ?>">
+                        <input type="hidden" name="order" value="<?= htmlspecialchars($order) ?>">
+                        <input type="hidden" name="recordsPerPage" value="<?= htmlspecialchars($records_per_page) ?>">
+                        <input type="hidden" name="page" value="<?= htmlspecialchars($page) ?>">
+                        <input type="hidden" name="search" value="<?= htmlspecialchars($searchTerm) ?>">
+
+                        <div class="mb-3">
+                            <label for="statusFilter" class="form-label">Select Status</label>
+                            <select id="statusFilter" name="statusFilter" class="form-select">
+                                <option value="">All</option>
+                                <option value="Approved" <?= $statusFilter === 'Approved' ? 'selected' : '' ?>>Approved
+                                </option>
+                                <option value="Need to review" <?= $statusFilter === 'Need to review' ? 'selected' : '' ?>>
+                                    Need to review</option>
+                                <option value="In progress" <?= $statusFilter === 'In progress' ? 'selected' : '' ?>>In
+                                    progress</option>
+                                <option value="To be created" <?= $statusFilter === 'To be created' ? 'selected' : '' ?>>To
+                                    be created</option>
+                                <option value="Pending approval" <?= $statusFilter === 'Pending approval' ? 'selected' : '' ?>>Pending approval</option>
+                                <option value="Not approved yet" <?= $statusFilter === 'Not approved yet' ? 'selected' : '' ?>>Not approved yet</option>
+                                <option value="Revision/Creation requested" <?= $statusFilter === 'Revision/Creation requested' ? 'selected' : '' ?>>Revision/Creation requested</option>
+                            </select>
+                        </div>
+                        <div class="d-flex justify-content-end">
+                            <button type="submit" class="btn btn-primary">Filter</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+    <!-- ==================  Filter by Revision Status Modal ==================  -->
+    <div class="modal fade" id="filterRevisionStatusModal" tabindex="-1"
+        aria-labelledby="filterRevisionStatusModalLabel" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="filterStatusModalLabel">Filter by Revision Status</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <form method="GET">
+                        <input type="hidden" name="sort" value="<?= htmlspecialchars($sort) ?>">
+                        <input type="hidden" name="order" value="<?= htmlspecialchars($order) ?>">
+                        <input type="hidden" name="recordsPerPage" value="<?= htmlspecialchars($records_per_page) ?>">
+                        <input type="hidden" name="page" value="<?= htmlspecialchars($page) ?>">
+                        <input type="hidden" name="search" value="<?= htmlspecialchars($searchTerm) ?>">
+
+                        <div class="mb-3">
+                            <label for="revisionStatusFilter" class="form-label">Select Revision Status</label>
+                            <select id="revisionStatusFilter" name="revisionStatusFilter" class="form-select">
+                                <option value="">All</option>
+                                <option value="Normal" <?= $revisionStatusFilter === 'Normal' ? 'selected' : '' ?>>Normal
+                                </option>
+                                <option value="Revision Required" <?= $revisionStatusFilter === 'Revision Required' ? 'selected' : '' ?>>Revision Required</option>
+                                <option value="Urgent Revision Required" <?= $revisionStatusFilter === 'Urgent Revision Required' ? 'selected' : '' ?>>Urgent Revision Required</option>
+                            </select>
+                        </div>
+                        <div class="d-flex justify-content-end">
+                            <button type="submit" class="btn btn-primary">Filter</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+
+
     <div id="loading-indicator" style="display: none;">
         <div class="spinner"></div>
         <p>Opening document...</p>
@@ -1226,7 +1573,6 @@ if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST["qaIdToEdit"])) {
         });
 
     </script>
-
     <script>
         // Enabling the tooltip
         const tooltips = document.querySelectorAll('.tooltips');
@@ -1234,7 +1580,6 @@ if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST["qaIdToEdit"])) {
             new bootstrap.Tooltip(t);
         })
     </script>
-
     <script>
         // Add event listeners to all forms with the class 'document-form'
         document.querySelectorAll('.document-form').forEach(form => {
@@ -1253,6 +1598,158 @@ if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST["qaIdToEdit"])) {
         });
 
 
+    </script>
+    <script>
+        const STORAGE_EXPIRATION_TIME = 8 * 60 * 60 * 1000; // 8 hours in milliseconds
+
+        // Save checkbox state to localStorage with a timestamp
+        document.querySelectorAll('.form-check-input').forEach(checkbox => {
+            checkbox.addEventListener('change', function () {
+                const columnClass = this.getAttribute('data-column');
+                const columns = document.querySelectorAll(`.${columnClass}`);
+                columns.forEach(column => {
+                    if (this.checked) {
+                        column.style.display = '';
+                        localStorage.setItem(columnClass, 'visible');
+                    } else {
+                        column.style.display = 'none';
+                        localStorage.setItem(columnClass, 'hidden');
+                    }
+                });
+                localStorage.setItem(columnClass + '_timestamp', Date.now()); // Save current timestamp
+            });
+        });
+
+        // Initialize checkboxes based on current column visibility
+        document.addEventListener('DOMContentLoaded', function () {
+            document.querySelectorAll('.form-check-input').forEach(checkbox => {
+                const columnClass = checkbox.getAttribute('data-column');
+                const columns = document.querySelectorAll(`.${columnClass}`);
+
+                // Retrieve stored visibility state and timestamp
+                const storedVisibility = localStorage.getItem(columnClass);
+                const storedTimestamp = localStorage.getItem(columnClass + '_timestamp');
+                const currentTime = Date.now();
+
+                // Check if stored timestamp is within the expiration time
+                if (storedTimestamp && (currentTime - storedTimestamp <= STORAGE_EXPIRATION_TIME)) {
+                    if (storedVisibility === 'hidden') {
+                        columns.forEach(column => column.style.display = 'none');
+                        checkbox.checked = false;
+                    } else {
+                        columns.forEach(column => column.style.display = '');
+                        checkbox.checked = true;
+                    }
+                } else {
+                    // Clear the localStorage if timestamp is expired
+                    localStorage.removeItem(columnClass);
+                    localStorage.removeItem(columnClass + '_timestamp');
+                    columns.forEach(column => column.style.display = '');
+                    checkbox.checked = true;
+                }
+            });
+        });
+        function resetColumnFilter() {
+            // Get all checkboxes
+            document.querySelectorAll('.form-check-input').forEach(checkbox => {
+                // Check each checkbox
+                checkbox.checked = true;
+
+                // Get the column class associated with the checkbox
+                const columnClass = checkbox.getAttribute('data-column');
+
+                // Get all columns with that class
+                const columns = document.querySelectorAll(`.${columnClass}`);
+
+                // Show all columns
+                columns.forEach(column => {
+                    column.style.display = '';
+                });
+
+                // Also update localStorage to reflect the reset state
+                localStorage.setItem(columnClass, 'visible');
+                localStorage.removeItem(columnClass + '_timestamp'); // Clear the timestamp
+            });
+        }
+
+    </script>
+    <script>
+        function editStatus(cell) {
+            // Get the form and span elements
+            const form = cell.querySelector('.edit-status-form');
+            const span = cell.querySelector('span');
+
+            // Toggle the form visibility
+            if (form.style.display === 'none') {
+                form.style.display = 'block';
+                span.style.display = 'none';
+                form.querySelector('select').focus();
+            } else {
+                form.style.display = 'none';
+                span.style.display = 'block';
+            }
+        }
+
+        function cancelEditStatus(link) {
+            // Find the closest <td> element
+            const cell = link.closest('td');
+            if (!cell) return;
+
+            // Find the form and span within the <td>
+            const form = cell.querySelector('.edit-status-form');
+            const span = cell.querySelector('span');
+
+            if (form && span) {
+                // Toggle visibility of form and span
+                form.style.display = 'none';
+                span.style.display = 'inline-block';
+            }
+        }
+
+        function editRevisionStatus(cell) {
+            // Get the form and span elements
+            const form = cell.querySelector('.edit-revision-status-form');
+            const span = cell.querySelector('span');
+
+            // Toggle the form visibility
+            if (form.style.display === 'none') {
+                form.style.display = 'block';
+                span.style.display = 'none'
+                form.querySelector('select').focus();
+            } else {
+                form.style.display = 'none';
+                form.style.display = 'block';
+            }
+        }
+
+        function cancelEditRevisionStatus(link) {
+            //Find the closest <td> element 
+            const cell = link.closest('td');
+            if (!cell) return;
+
+            // Find the form and span within the <td>
+            const form = cell.querySelector('.edit-revision-status-form');
+            const span = cell.querySelector('span');
+
+            if (form && span) {
+                //Toggle visibility of form and span
+                form.style.display = 'none';
+                span.style.display = 'inline-block';
+            }
+        }
+    </script>
+    <script>
+        function clearURLParameters() {
+            // Use the URL API to manipulate the URL
+            const url = new URL(window.location.href);
+            url.search = ''; // Clear the query string
+
+            // Update the URL without reloading the page
+            window.history.pushState({}, '', url);
+
+            // Reload the page with the updated URL
+            window.location.href = url.href; // This will reload the page with the cleared URL parameters
+        }
     </script>
 </body>
 
